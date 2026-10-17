@@ -3,10 +3,11 @@ import { useNavigate } from "react-router-dom";
 import { useApp } from "../lib/store";
 import { Gender } from "../types";
 import { getAvatarUrl } from "../lib/avatarUtils";
+import { calculateProfileScore } from "../lib/profileScore";
 import { motion } from "motion/react";
 import { 
   Menu, Sparkles, Heart, CheckCircle, Shield, 
-  Users, Eye, Award, ExternalLink, HelpCircle, AlertTriangle 
+  Users, Eye, Award, ExternalLink, HelpCircle, AlertTriangle, ChevronLeft 
 } from "lucide-react";
 
 interface DashboardProps {
@@ -61,6 +62,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
   };
 
   const activeStories = successStories.filter(s => s.isApproved).slice(0, 2);
+  const profileScore = calculateProfileScore(currentUser);
 
   return (
     <div className="pb-24 pt-4 font-sans text-right min-h-screen bg-slate-50" dir="rtl">
@@ -127,6 +129,42 @@ export const Dashboard: React.FC<DashboardProps> = ({
             </div>
           </div>
         </div>
+
+        {/* Profile Completion Meter */}
+        {profileScore.score < 100 && (
+          <div className="bg-white rounded-2xl border border-emerald-100 p-4 shadow-sm space-y-3">
+            <div className="flex justify-between items-center text-xs">
+              <span className="font-bold text-slate-800 flex items-center gap-1.5">
+                <CheckCircle className="w-4 h-4 text-emerald-600" />
+                اكتمال ملفك الشخصي
+              </span>
+              <span className="font-extrabold text-emerald-700 font-mono bg-emerald-50 px-2.5 py-0.5 rounded-full text-xs">
+                {profileScore.score}%
+              </span>
+            </div>
+
+            {/* Progress bar */}
+            <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
+              <div 
+                className="bg-emerald-600 h-full rounded-full transition-all duration-500"
+                style={{ width: `${profileScore.score}%` }}
+              />
+            </div>
+
+            <div className="flex justify-between items-center pt-1">
+              <p className="text-[11px] text-slate-500 leading-relaxed max-w-[280px]">
+                أكمل بياناتك لزيادة ظهورك وفرص التوافق الجاد 3 أضعاف.
+              </p>
+              <button
+                onClick={() => navigate("/my-profile")}
+                className="text-xs font-bold text-emerald-700 hover:text-emerald-800 flex items-center gap-0.5 transition"
+              >
+                <span>استكمال</span>
+                <ChevronLeft className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Dynamic High-Quality Stats Dashboard widgets */}
         <div className="grid grid-cols-2 gap-4">

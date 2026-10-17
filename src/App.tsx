@@ -9,6 +9,8 @@ import { Sidebar } from "./components/Sidebar";
 import { BottomBar } from "./components/BottomBar";
 import { ToastContainer } from "./components/ui/ToastContainer";
 import { ConfirmModal } from "./components/ui/ConfirmModal";
+import { OnboardingModal } from "./components/OnboardingModal";
+import { ReviewPromptModal } from "./components/ReviewPromptModal";
 import { ErrorBoundary } from "./components/ui/ErrorBoundary";
 import { Skeleton, ProfileCardSkeleton } from "./components/ui/Skeleton";
 import { Button } from "./components/ui/Button";
@@ -44,7 +46,7 @@ const PageLoadingFallback: React.FC = () => (
 
 const AppContent: React.FC = () => {
   const { currentUser, isAuthReady, dbError, retryLoadData, logout } = useApp();
-  const { isSidebarOpen, setSidebarOpen } = useUIStore();
+  const { isSidebarOpen, setSidebarOpen, isReviewModalOpen, closeReviewModal } = useUIStore();
 
   useEffect(() => {
     if (isAuthReady) {
@@ -180,6 +182,8 @@ const AppContent: React.FC = () => {
       {/* Global Interactive Modals & Toasts */}
       <ToastContainer />
       <ConfirmModal />
+      <OnboardingModal />
+      <ReviewPromptModal isOpen={isReviewModalOpen} onClose={closeReviewModal} />
     </div>
   );
 };

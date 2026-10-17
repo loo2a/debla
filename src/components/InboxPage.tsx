@@ -3,7 +3,7 @@ import { useApp } from "../lib/store";
 import { Gender, MaritalStatus, Message, Notification, UserProfile } from "../types";
 import { 
   Bell, Mail, MessageSquare, Send, CheckCheck, 
-  Trash2, ShieldCheck, ChevronLeft, ArrowRight, Sparkles, Lock 
+  Trash2, ShieldCheck, ChevronLeft, ArrowRight, Sparkles, Lock, ShieldAlert 
 } from "lucide-react";
 import { useParams, useNavigate } from "react-router-dom";
 import { getAvatarUrl } from "../lib/avatarUtils";
@@ -207,6 +207,14 @@ export const InboxPage: React.FC<InboxPageProps> = ({
               </div>
 
               <div className="w-8" /> {/* spacing */}
+            </div>
+
+            {/* Islamic & Financial Safety Warning Banner */}
+            <div className="bg-amber-50 border-b border-amber-200/80 px-4 py-2 flex items-center gap-2.5 text-[11px] text-amber-900 leading-snug">
+              <ShieldAlert className="w-4 h-4 text-amber-700 flex-shrink-0" />
+              <span>
+                <strong>تنبيه أمان وشرع:</strong> احذر مشاركة أي بيانات بنكية أو تحويل أموال لأي طرف. التطبيق مخصص للتعارف الجاد بغرض الزواج الشرعي العلني بإشراك الأهل.
+              </span>
             </div>
 
             {/* Chat Body messages list */}

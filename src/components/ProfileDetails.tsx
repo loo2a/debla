@@ -31,7 +31,7 @@ export const ProfileDetails: React.FC<ProfileDetailsProps> = ({
     currentUser, profiles, expressInterest, acceptInterest, ignoreProfile, 
     blockProfile, reportProfile, interactions, recordProfileView 
   } = useApp();
-  const { addToast, showConfirm } = useUIStore();
+  const { addToast, showConfirm, triggerReviewPrompt } = useUIStore();
 
   const [showReportModal, setShowReportModal] = useState(false);
   const [reportReason, setReportReason] = useState("");
@@ -103,6 +103,9 @@ export const ProfileDetails: React.FC<ProfileDetailsProps> = ({
     const res = await acceptInterest(profile.id);
     if (res.ok) {
       addToast(`تم قبول الاهتمام المتبادل بنجاح! تم فتح تفاصيل التواصل ورؤية الصورة.`, "success");
+      setTimeout(() => {
+        triggerReviewPrompt();
+      }, 1500);
     } else {
       addToast(res.error || "فشل قبول الاهتمام", "error");
     }

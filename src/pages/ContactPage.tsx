@@ -98,12 +98,21 @@ export const ContactPage: React.FC = () => {
         </Card>
       )}
 
-      <div className="bg-slate-100 p-4 rounded-2xl border border-slate-200/55 space-y-2">
+      <div className="bg-slate-100 p-4 rounded-2xl border border-slate-200/55 space-y-3">
         <h4 className="text-xs font-bold text-slate-800">قنوات التواصل المباشر السريعة:</h4>
         <div className="text-[11px] text-slate-600 space-y-1">
           <p className="flex items-center gap-1.5 font-mono"><Mail className="w-3.5 h-3.5 text-slate-400" /> support@mawada-rahma.com</p>
-          <p className="flex items-center gap-1.5 font-mono"><Phone className="w-3.5 h-3.5 text-slate-400" /> +20 1012345678</p>
+          <p className="flex items-center gap-1.5 font-mono"><Phone className="w-3.5 h-3.5 text-slate-400" /> خدمة الأعضاء عبر واتساب</p>
         </div>
+        <a
+          href="https://api.whatsapp.com/send?phone=201012345678&text=%D8%A7%D9%84%D8%B3%D9%84%D8%A7%D9%85%20%D8%B9%D9%84%D9%8A%D9%83%D9%85%D8%8C%20%D9%84%D8%AF%D9%8A%20%D8%A7%D8%B3%D8%AA%D9%81%D8%B3%D8%A7%D8%B1%20%D8%A8%D8%AE%D8%B5%D9%88%D8%B5%20%D8%AA%D8%B7%D8%A8%D9%8A%D9%82%20%D9%85%D9%88%D8%AF%D8%A9%20%D9%88%D8%B1%D8%AD%D9%85%D8%A9"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center justify-center gap-2 w-full py-2.5 px-4 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-sm transition"
+        >
+          <Phone className="w-4 h-4" />
+          <span>محادثة الدعم الفني المباشر (WhatsApp)</span>
+        </a>
       </div>
     </div>
   );

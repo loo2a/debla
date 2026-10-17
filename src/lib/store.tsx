@@ -422,11 +422,29 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   }, [loadAll]);
 
   // ------------------------------------------------------------------
-  // Auth actions (email OTP)
+  // ------------------------------------------------------------------
+  // Auth actions (email OTP) with Cooldown & Demo Account Support
   // ------------------------------------------------------------------
   const requestEmailOtp = async (email: string): Promise<ActionResult> => {
+    const cleanEmail = email.trim().toLowerCase();
+
+    // 1. Google Play Reviewer Test Account Bypass
+    if (cleanEmail === "reviewer@mawada-rahma.com" || cleanEmail === "demo@mawada-rahma.com") {
+      return { ok: true };
+    }
+
+    // 2. Cooldown check (60s between OTP requests)
+    const lastRequest = Number(sessionStorage.getItem(`otp_request_${cleanEmail}`) || "0");
+    const now = Date.now();
+    if (now - lastRequest < 60000) {
+      const waitSeconds = Math.ceil((60000 - (now - lastRequest)) / 1000);
+      return { ok: false, error: `يرجى الانتظار ${waitSeconds} ثانية قبل طلب رمز تحقق جديد.` };
+    }
+
+    sessionStorage.setItem(`otp_request_${cleanEmail}`, String(now));
+
     const { error } = await supabase.auth.signInWithOtp({
-      email: email.trim().toLowerCase(),
+      email: cleanEmail,
       options: { shouldCreateUser: true },
     });
     if (error) return { ok: false, error: toAuthErrorMessage(error) };
@@ -434,9 +452,23 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const verifyEmailOtp = async (email: string, code: string): Promise<ActionResult> => {
+    const cleanEmail = email.trim().toLowerCase();
+    const cleanCode = code.trim();
+
+    // 1. Google Play Reviewer Test Account Bypass (fixed code: 123456)
+    if ((cleanEmail === "reviewer@mawada-rahma.com" || cleanEmail === "demo@mawada-rahma.com") && cleanCode === "123456") {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: cleanEmail,
+        password: "ReviewerPassword2026!",
+      });
+      if (!error && data.user) {
+        return { ok: true };
+      }
+    }
+
     const { error } = await supabase.auth.verifyOtp({
-      email: email.trim().toLowerCase(),
-      token: code.trim(),
+      email: cleanEmail,
+      token: cleanCode,
       type: "email",
     });
     if (error) return { ok: false, error: toAuthErrorMessage(error) };

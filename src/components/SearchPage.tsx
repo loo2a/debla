@@ -4,9 +4,10 @@ import { Gender, UserProfile } from "../types";
 import { SearchFilters, SearchFilterState } from "./search/SearchFilters";
 import { SearchProfileCard } from "./search/SearchProfileCard";
 import { EmptyState } from "./ui/EmptyState";
-import { Search, UserX } from "lucide-react";
+import { Search, UserX, Share2 } from "lucide-react";
 import { ProfileCardSkeleton } from "./ui/Skeleton";
 import { useNavigate } from "react-router-dom";
+import { shareMawadaApp } from "../lib/shareUtils";
 
 interface SearchPageProps {
   onSelectProfile?: (userId: string) => void;
@@ -144,40 +145,58 @@ export const SearchPage: React.FC<SearchPageProps> = ({ onSelectProfile }) => {
               <ProfileCardSkeleton />
             </div>
           ) : results.length === 0 ? (
-            <EmptyState
-              icon={UserX}
-              title="لم نجد أي ملف يطابق شروطك الحالية"
-              description="يرجى توسيع نطاق الفلاتر للوصول لفرص توافق أكثر شمولاً."
-              actionLabel="إعادة ضبط الفلاتر"
-              onAction={() => {
-                setFilter({
-                  nationality: "all",
-                  residence: "all",
-                  ageFrom: 18,
-                  ageTo: 65,
-                  maritalStatus: "all",
-                  sortBy: "joinDate",
-                  isAdvanced: false,
-                  heightFrom: 140,
-                  heightTo: 210,
-                  weightFrom: 40,
-                  weightTo: 150,
-                  skinColor: "all",
-                  bodyBuild: "all",
-                  religiosity: "all",
-                  prayers: "all",
-                  smoking: "all",
-                  beard: "all",
-                  hijab: "all",
-                  education: "all",
-                  income: "all",
-                  qaIma: "all",
-                  mahr: "all",
-                  timeframe: "all",
-                });
-                setCurrentPage(1);
-              }}
-            />
+            <div className="space-y-4">
+              <EmptyState
+                icon={UserX}
+                title="لم نجد أي ملف يطابق شروطك الحالية"
+                description="التطبيق في مرحلة الإطلاق المبارك، جرب توسيع نطاق الفلاتر للوصول لفرص توافق أكثر شمولاً."
+                actionLabel="إعادة ضبط الفلاتر"
+                onAction={() => {
+                  setFilter({
+                    nationality: "all",
+                    residence: "all",
+                    ageFrom: 18,
+                    ageTo: 65,
+                    maritalStatus: "all",
+                    sortBy: "joinDate",
+                    isAdvanced: false,
+                    heightFrom: 140,
+                    heightTo: 210,
+                    weightFrom: 40,
+                    weightTo: 150,
+                    skinColor: "all",
+                    bodyBuild: "all",
+                    religiosity: "all",
+                    prayers: "all",
+                    smoking: "all",
+                    beard: "all",
+                    hijab: "all",
+                    education: "all",
+                    income: "all",
+                    qaIma: "all",
+                    mahr: "all",
+                    timeframe: "all",
+                  });
+                  setCurrentPage(1);
+                }}
+              />
+
+              <div className="bg-emerald-50/80 border border-emerald-200/80 rounded-3xl p-5 text-center space-y-2 max-w-sm mx-auto shadow-sm">
+                <p className="text-xs text-emerald-900 font-extrabold">
+                  «الدال على الخير كفاعله»
+                </p>
+                <p className="text-[11px] text-emerald-800 leading-relaxed">
+                  ساهم في نشر التطبيق بين معارفك وأهلك لمساعدة الشباب والفتيات في تيسير الزواج الصالح وبناء بيوت مباركة.
+                </p>
+                <button
+                  onClick={() => void shareMawadaApp()}
+                  className="inline-flex items-center gap-1.5 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow-sm transition cursor-pointer"
+                >
+                  <Share2 className="w-3.5 h-3.5" />
+                  <span>مشاركة التطبيق عبر واتساب</span>
+                </button>
+              </div>
+            </div>
           ) : (
             <div className="grid grid-cols-1 gap-4">
               {results.map((p) => (
