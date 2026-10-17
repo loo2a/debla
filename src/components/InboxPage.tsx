@@ -1,12 +1,12 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useApp } from "../lib/store";
-import { Gender, Message, Notification } from "../types";
+import { Gender, MaritalStatus, Message, Notification, UserProfile } from "../types";
 import { 
   Bell, Mail, MessageSquare, Send, CheckCheck, 
   Trash2, ShieldCheck, ChevronLeft, ArrowRight, Sparkles, Lock 
 } from "lucide-react";
-
 import { useParams, useNavigate } from "react-router-dom";
+import { getAvatarUrl } from "../lib/avatarUtils";
 
 interface InboxPageProps {
   selectedChatUserId?: string | null;
@@ -41,7 +41,8 @@ export const InboxPage: React.FC<InboxPageProps> = ({
 
   const { 
     currentUser, messages, notifications, profiles, sendMessage, 
-    markMessagesAsRead, markNotificationAsRead, markAllNotificationsAsRead 
+    markMessagesAsRead, markNotificationAsRead, markAllNotificationsAsRead,
+    fetchProfileById 
   } = useApp();
 
   const [activeTab, setActiveTab] = useState<"messages" | "notifications">("messages");
@@ -49,6 +50,51 @@ export const InboxPage: React.FC<InboxPageProps> = ({
   const chatBottomRef = useRef<HTMLDivElement>(null);
 
   if (!currentUser) return null;
+
+  const createFallbackPartner = (partnerId: string): UserProfile => ({
+    id: partnerId,
+    memberNumber: partnerId.slice(0, 8),
+    name: "طرف المحادثة",
+    gender: currentUser.gender === Gender.MALE ? Gender.FEMALE : Gender.MALE,
+    avatar: currentUser.gender === Gender.MALE ? "female_1" : "male_1",
+    profileImage: null,
+    isMobileVerified: false,
+    agreedToCharter: true,
+    age: 25,
+    nationality: "",
+    residence: "",
+    profession: "",
+    education: "",
+    income: "",
+    maritalStatus: MaritalStatus.SINGLE,
+    hasChildren: false,
+    childrenCount: 0,
+    isSmoker: false,
+    height: 170,
+    weight: 70,
+    skinColor: "",
+    bodyBuild: "",
+    healthStatus: "",
+    hasDisability: false,
+    chronicDiseases: "",
+    religiousCommitment: "",
+    prayers: "",
+    hasBeard: null,
+    hijabType: null,
+    qaImaStance: "",
+    mahrOpinion: "",
+    marriageTimeframe: "",
+    shariaVisionStance: "",
+    aboutMe: "",
+    partnerSpecs: "",
+    hobbies: [],
+    isPremium: false,
+    isVerified: false,
+    photoPrivacy: "public",
+    joinDate: new Date().toISOString(),
+    isOnline: false,
+    viewsCount: 0,
+  });
 
   // Auto scroll to bottom in chat
   useEffect(() => {
@@ -64,14 +110,31 @@ export const InboxPage: React.FC<InboxPageProps> = ({
     }
   }, [selectedChatUserId, messages]);
 
+  // Fetch missing profiles for chat partners or active chat user
+  useEffect(() => {
+    if (selectedChatUserId && !profiles.some(p => p.id === selectedChatUserId)) {
+      fetchProfileById(selectedChatUserId);
+    }
+  }, [selectedChatUserId, profiles, fetchProfileById]);
+
   // Filter messages related to the current user
   const myMessages = messages.filter(m => m.senderId === currentUser.id || m.receiverId === currentUser.id);
 
-  // Group messages by partner
+  useEffect(() => {
+    const missingPartnerIds = Array.from(new Set(
+      myMessages.map(m => (m.senderId === currentUser.id ? m.receiverId : m.senderId))
+    )).filter(id => id && !profiles.some(p => p.id === id));
+
+    missingPartnerIds.forEach(id => {
+      fetchProfileById(id);
+    });
+  }, [myMessages, currentUser.id, profiles, fetchProfileById]);
+
+  // Group messages by partner with fallback so conversations are never lost
   const chatPartners = Array.from(new Set(myMessages.map(m => 
     m.senderId === currentUser.id ? m.receiverId : m.senderId
   ))).map(partnerId => {
-    const partner = profiles.find(p => p.id === partnerId);
+    const partner: UserProfile = profiles.find(p => p.id === partnerId) || createFallbackPartner(partnerId);
     const partnerMessages = myMessages.filter(m => 
       (m.senderId === currentUser.id && m.receiverId === partnerId) || 
       (m.senderId === partnerId && m.receiverId === currentUser.id)
@@ -84,7 +147,7 @@ export const InboxPage: React.FC<InboxPageProps> = ({
       lastMessage,
       unreadCount
     };
-  }).filter(item => item.partner !== undefined);
+  });
 
   // Active Chat Message history
   const activeChatMessages = myMessages.filter(m => 
@@ -92,7 +155,9 @@ export const InboxPage: React.FC<InboxPageProps> = ({
     (m.senderId === selectedChatUserId && m.receiverId === currentUser.id)
   );
 
-  const activeChatPartner = profiles.find(p => p.id === selectedChatUserId);
+  const activeChatPartner: UserProfile | undefined = selectedChatUserId 
+    ? (profiles.find(p => p.id === selectedChatUserId) || createFallbackPartner(selectedChatUserId))
+    : undefined;
 
   // Handle send message
   const handleSendMessage = async (e: React.FormEvent) => {
@@ -127,8 +192,8 @@ export const InboxPage: React.FC<InboxPageProps> = ({
 
               <div className="flex items-center gap-3">
                 <img 
-                  src={activeChatPartner.profileImage || `https://images.unsplash.com/photo-${activeChatPartner.avatar === "male_1" ? "1534528741775-53994a69daeb" : activeChatPartner.avatar === "female_1" ? "1494790108377-be9c29b29330" : "1507003211169-0a1dd7228f2d"}?auto=format&fit=crop&w=150&q=80`} 
-                  alt="" 
+                  src={getAvatarUrl(activeChatPartner)} 
+                  alt={activeChatPartner.name} 
                   className="w-10 h-10 rounded-full object-cover border border-slate-200"
                   referrerPolicy="no-referrer"
                 />
@@ -267,8 +332,8 @@ export const InboxPage: React.FC<InboxPageProps> = ({
                       >
                         <div className="flex items-center gap-3 overflow-hidden">
                           <img 
-                            src={item.partner.profileImage || `https://images.unsplash.com/photo-${item.partner.avatar === "male_1" ? "1534528741775-53994a69daeb" : item.partner.avatar === "female_1" ? "1494790108377-be9c29b29330" : "1507003211169-0a1dd7228f2d"}?auto=format&fit=crop&w=150&q=80`} 
-                            alt="" 
+                            src={getAvatarUrl(item.partner)} 
+                            alt={item.partner.name} 
                             className="w-11 h-11 rounded-full object-cover border border-slate-200"
                             referrerPolicy="no-referrer"
                           />

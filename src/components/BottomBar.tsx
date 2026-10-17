@@ -1,7 +1,7 @@
 import React from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useApp } from "../lib/store";
-import { Home, Search, Sparkles, Bell } from "lucide-react";
+import { Home, Search, Sparkles, Bell, User } from "lucide-react";
 
 interface BottomBarProps {
   activeScreen?: string;
@@ -19,9 +19,10 @@ export const BottomBar: React.FC<BottomBarProps> = ({ activeScreen: propActiveSc
 
   const tabs = [
     { id: "home", path: "/", label: "الرئيسية", icon: Home },
-    { id: "notifications", path: "/inbox", label: "البريد والاشعارات", icon: Bell, badge: unreadCount },
-    { id: "premium", path: "/premium", label: "باقة التميز", icon: Sparkles, highlight: true },
     { id: "search", path: "/search", label: "بحث", icon: Search },
+    { id: "premium", path: "/premium", label: "التميز", icon: Sparkles, highlight: true },
+    { id: "notifications", path: "/inbox", label: "الرسائل", icon: Bell, badge: unreadCount },
+    { id: "profile", path: "/my-profile", label: "حسابي", icon: User },
   ];
 
   const handleTabClick = (path: string, legacyId: string) => {

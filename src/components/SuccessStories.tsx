@@ -4,6 +4,8 @@ import { Award, Heart, Sparkles, Send, CheckCircle2, User, ChevronLeft } from "l
 
 import { useUIStore } from "../stores/uiStore";
 
+import { DEFAULT_MALE_AVATAR, DEFAULT_FEMALE_AVATAR } from "../lib/avatarUtils";
+
 export const SuccessStories: React.FC = () => {
   const { successStories, adminAddStory } = useApp();
   const { addToast } = useUIStore();
@@ -60,14 +62,14 @@ export const SuccessStories: React.FC = () => {
                 <div className="flex items-center gap-2">
                   <div className="flex -space-x-2 space-x-reverse">
                     <img 
-                      src={`https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80`} 
+                      src={DEFAULT_MALE_AVATAR} 
                       className="w-8 h-8 rounded-full object-cover border border-white z-10 shadow-sm"
-                      alt=""
+                      alt={story.husbandName}
                     />
                     <img 
-                      src={`https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=150&q=80`} 
+                      src={DEFAULT_FEMALE_AVATAR} 
                       className="w-8 h-8 rounded-full object-cover border border-white shadow-sm"
-                      alt=""
+                      alt={story.wifeName}
                     />
                   </div>
                   <div>

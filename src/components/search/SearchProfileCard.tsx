@@ -1,6 +1,7 @@
 import React from "react";
 import { UserProfile } from "../../types";
 import { User, MapPin, ShieldCheck, Sparkles } from "lucide-react";
+import { getAvatarUrl } from "../../lib/avatarUtils";
 
 interface SearchProfileCardProps {
   profile: UserProfile;
@@ -22,16 +23,7 @@ export const SearchProfileCard: React.FC<SearchProfileCardProps> = ({ profile, o
       )}
 
       <img
-        src={
-          profile.profileImage ||
-          `https://images.unsplash.com/photo-${
-            profile.avatar === "male_1"
-              ? "1534528741775-53994a69daeb"
-              : profile.avatar === "female_1"
-              ? "1494790108377-be9c29b29330"
-              : "1507003211169-0a1dd7228f2d"
-          }?auto=format&fit=crop&w=150&q=80`
-        }
+        src={getAvatarUrl(profile, undefined, profile.photoPrivacy !== "public")}
         alt={profile.name}
         className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl object-cover border border-slate-200 group-hover:scale-105 transition duration-200 flex-shrink-0"
         referrerPolicy="no-referrer"

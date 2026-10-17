@@ -3,6 +3,7 @@ import { useApp } from "../lib/store";
 import { useNavigate } from "react-router-dom";
 import { Heart, ShieldCheck } from "lucide-react";
 import { Gender } from "../types";
+import { getAvatarUrl } from "../lib/avatarUtils";
 import { EmptyState } from "../components/ui/EmptyState";
 import { Card } from "../components/ui/Card";
 
@@ -46,7 +47,7 @@ export const InterestsPage: React.FC = () => {
             >
               <div className="flex items-center gap-3">
                 <img 
-                  src={p.profileImage || `https://images.unsplash.com/photo-${p.avatar === "male_1" ? "1534528741775-53994a69daeb" : p.avatar === "female_1" ? "1494790108377-be9c29b29330" : "1507003211169-0a1dd7228f2d"}?auto=format&fit=crop&w=150&q=80`} 
+                  src={getAvatarUrl(p, undefined, p.photoPrivacy !== "public")} 
                   alt="" 
                   className="w-12 h-12 rounded-full object-cover border border-slate-200"
                   referrerPolicy="no-referrer"

@@ -58,6 +58,7 @@ interface AppContextType {
 
   // Search & Pagination
   searchProfiles: (filter: SearchProfilesFilter) => Promise<SearchProfilesResponse>;
+  fetchProfileById: (id: string) => Promise<UserProfile | null>;
 
   // Notifications
   markNotificationAsRead: (id: string) => void;
@@ -234,7 +235,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         messagesRes, notificationsRes, interactionsRes, requestsRes, storiesRes
       ] = await Promise.all([
         supabase.rpc("is_admin"),
-        supabase.from("profiles").select("*"),
+        supabase.from("profiles").select("*").limit(100),
         supabase.from("profile_private").select("*"),
         Promise.resolve(supabase.from("profile_sensitive").select("*")).catch(() => ({ data: [] } as any)),
         Promise.resolve(supabase.from("profile_preferences").select("*")).catch(() => ({ data: [] } as any)),
@@ -318,26 +319,63 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       .on(
         "postgres_changes",
         {
-          event: "INSERT",
+          event: "*",
           schema: "public",
           table: "messages",
         },
         (payload) => {
-          const newMsg = payload.new as any;
-          if (newMsg.senderId === currentUser.id || newMsg.receiverId === currentUser.id ||
-              newMsg.sender_id === currentUser.id || newMsg.receiver_id === currentUser.id) {
-            const formatted: Message = {
-              id: newMsg.id,
-              senderId: newMsg.senderId || newMsg.sender_id,
-              receiverId: newMsg.receiverId || newMsg.receiver_id,
-              content: newMsg.content,
-              timestamp: newMsg.timestamp || newMsg.created_at,
-              isRead: newMsg.isRead ?? newMsg.is_read ?? false,
-            };
-            setMessages((prev) => {
-              if (prev.some(m => m.id === formatted.id)) return prev;
-              return [...prev, formatted];
-            });
+          if (payload.eventType === "INSERT") {
+            const newMsg = payload.new as any;
+            if (newMsg.senderId === currentUser.id || newMsg.receiverId === currentUser.id ||
+                newMsg.sender_id === currentUser.id || newMsg.receiver_id === currentUser.id) {
+              const formatted: Message = {
+                id: newMsg.id,
+                senderId: newMsg.senderId || newMsg.sender_id,
+                receiverId: newMsg.receiverId || newMsg.receiver_id,
+                content: newMsg.content,
+                timestamp: newMsg.timestamp || newMsg.created_at,
+                isRead: newMsg.isRead ?? newMsg.is_read ?? false,
+              };
+              setMessages((prev) => {
+                if (prev.some(m => m.id === formatted.id)) return prev;
+                return [...prev, formatted];
+              });
+            }
+          } else if (payload.eventType === "UPDATE") {
+            const updated = payload.new as any;
+            setMessages((prev) => prev.map(m => (m.id === updated.id ? { ...m, isRead: updated.isRead ?? updated.is_read ?? m.isRead } : m)));
+          }
+        }
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "notifications",
+        },
+        (payload) => {
+          if (payload.eventType === "INSERT") {
+            const newNotif = payload.new as any;
+            if (newNotif.userId === currentUser.id || newNotif.user_id === currentUser.id) {
+              const formatted: Notification = {
+                id: newNotif.id,
+                userId: newNotif.userId || newNotif.user_id,
+                type: newNotif.type,
+                senderId: newNotif.senderId || newNotif.sender_id,
+                senderName: newNotif.senderName || newNotif.sender_name,
+                content: newNotif.content,
+                timestamp: newNotif.timestamp || newNotif.created_at,
+                isRead: newNotif.isRead ?? newNotif.is_read ?? false,
+              };
+              setNotifications((prev) => {
+                if (prev.some(n => n.id === formatted.id)) return prev;
+                return [formatted, ...prev];
+              });
+            }
+          } else if (payload.eventType === "UPDATE") {
+            const updated = payload.new as any;
+            setNotifications((prev) => prev.map(n => (n.id === updated.id ? { ...n, isRead: updated.isRead ?? updated.is_read ?? n.isRead } : n)));
           }
         }
       )
@@ -346,24 +384,23 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         {
           event: "INSERT",
           schema: "public",
-          table: "notifications",
+          table: "interactions",
         },
         (payload) => {
-          const newNotif = payload.new as any;
-          if (newNotif.userId === currentUser.id || newNotif.user_id === currentUser.id) {
-            const formatted: Notification = {
-              id: newNotif.id,
-              userId: newNotif.userId || newNotif.user_id,
-              type: newNotif.type,
-              senderId: newNotif.senderId || newNotif.sender_id,
-              senderName: newNotif.senderName || newNotif.sender_name,
-              content: newNotif.content,
-              timestamp: newNotif.timestamp || newNotif.created_at,
-              isRead: newNotif.isRead ?? newNotif.is_read ?? false,
+          const newInt = payload.new as any;
+          if (newInt.fromUserId === currentUser.id || newInt.toUserId === currentUser.id ||
+              newInt.from_user_id === currentUser.id || newInt.to_user_id === currentUser.id) {
+            const formatted: Interaction = {
+              id: newInt.id,
+              fromUserId: newInt.fromUserId || newInt.from_user_id,
+              toUserId: newInt.toUserId || newInt.to_user_id,
+              type: newInt.type,
+              reason: newInt.reason,
+              timestamp: newInt.timestamp || newInt.created_at,
             };
-            setNotifications((prev) => {
-              if (prev.some(n => n.id === formatted.id)) return prev;
-              return [formatted, ...prev];
+            setInteractions((prev) => {
+              if (prev.some(i => i.id === formatted.id)) return prev;
+              return [...prev, formatted];
             });
           }
         }
@@ -715,6 +752,28 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
   };
 
+  const fetchProfileById = useCallback(async (id: string): Promise<UserProfile | null> => {
+    if (!id) return null;
+    if (currentUser?.id === id) return currentUser;
+    const existing = profiles.find(p => p.id === id);
+    if (existing) return existing;
+
+    try {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("id", id)
+        .maybeSingle();
+
+      if (error || !data) return null;
+      const loaded = toProfile(data);
+      setProfiles(prev => (prev.some(p => p.id === loaded.id) ? prev : [...prev, loaded]));
+      return loaded;
+    } catch {
+      return null;
+    }
+  }, [profiles, currentUser]);
+
   // ------------------------------------------------------------------
   // Messaging with Rate Limiting
   // ------------------------------------------------------------------
@@ -906,6 +965,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       sendMessage,
       markMessagesAsRead,
       searchProfiles,
+      fetchProfileById,
 
       markNotificationAsRead,
       markAllNotificationsAsRead,

@@ -2,6 +2,7 @@ import React from "react";
 import { useNavigate } from "react-router-dom";
 import { useApp } from "../lib/store";
 import { Gender } from "../types";
+import { getAvatarUrl } from "../lib/avatarUtils";
 import { motion } from "motion/react";
 import { 
   Menu, Sparkles, Heart, CheckCircle, Shield, 
@@ -82,7 +83,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
         <div className="flex items-center gap-2">
           <img 
-            src={currentUser.profileImage || `https://images.unsplash.com/photo-${currentUser.avatar === "male_1" ? "1534528741775-53994a69daeb" : currentUser.avatar === "female_1" ? "1494790108377-be9c29b29330" : "1507003211169-0a1dd7228f2d"}?auto=format&fit=crop&w=150&q=80`} 
+            src={getAvatarUrl(currentUser)} 
             alt={currentUser.name} 
             className="w-10 h-10 rounded-full object-cover border border-slate-200"
             referrerPolicy="no-referrer"
@@ -176,7 +177,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
               >
                 <div className="flex items-center gap-3">
                   <img 
-                    src={profile.profileImage || `https://images.unsplash.com/photo-${profile.avatar === "male_1" ? "1534528741775-53994a69daeb" : profile.avatar === "female_1" ? "1494790108377-be9c29b29330" : "1507003211169-0a1dd7228f2d"}?auto=format&fit=crop&w=150&q=80`} 
+                    src={getAvatarUrl(profile, undefined, profile.photoPrivacy !== "public")} 
                     alt={profile.name} 
                     className="w-11 h-11 rounded-full object-cover border border-slate-200"
                     referrerPolicy="no-referrer"
@@ -230,12 +231,12 @@ export const Dashboard: React.FC<DashboardProps> = ({
                 <div className="flex items-center gap-2">
                   <div className="flex -space-x-2 space-x-reverse">
                     <img 
-                      src={`https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80`} 
+                      src={getAvatarUrl(story.avatarHusband || "male_1", Gender.MALE)} 
                       className="w-7 h-7 rounded-full object-cover border border-white z-10"
                       alt=""
                     />
                     <img 
-                      src={`https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=150&q=80`} 
+                      src={getAvatarUrl(story.avatarWife || "female_1", Gender.FEMALE)} 
                       className="w-7 h-7 rounded-full object-cover border border-white"
                       alt=""
                     />

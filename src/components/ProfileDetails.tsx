@@ -3,6 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { useApp } from "../lib/store";
 import { useUIStore } from "../stores/uiStore";
 import { UserProfile, Gender, HijabType } from "../types";
+import { getAvatarUrl } from "../lib/avatarUtils";
 import { 
   Heart, EyeOff, Ban, AlertTriangle, MessageSquare, 
   Bookmark, ArrowRight, ShieldCheck, Sparkles, MapPin, 
@@ -87,7 +88,7 @@ export const ProfileDetails: React.FC<ProfileDetailsProps> = ({
   const isIgnored = interactions.some(i => i.fromUserId === currentUser?.id && i.toUserId === profile.id && i.type === "ignore");
   const isBlocked = interactions.some(i => i.fromUserId === currentUser?.id && i.toUserId === profile.id && i.type === "block");
 
-  const isPhotoLocked = profile.photoPrivacy === "accepted_interest_only" && !hasAcceptedInterest;
+  const isPhotoLocked = profile.photoPrivacy === "hidden" || (profile.photoPrivacy === "accepted_interest_only" && !hasAcceptedInterest);
 
   const handleInterest = async () => {
     const res = await expressInterest(profile.id);
@@ -192,7 +193,7 @@ export const ProfileDetails: React.FC<ProfileDetailsProps> = ({
                 </div>
               ) : (
                 <img 
-                  src={profile.profileImage || `https://images.unsplash.com/photo-${profile.avatar === "male_1" ? "1534528741775-53994a69daeb" : profile.avatar === "female_1" ? "1494790108377-be9c29b29330" : "1507003211169-0a1dd7228f2d"}?auto=format&fit=crop&w=150&q=80`} 
+                  src={getAvatarUrl(profile, undefined, isPhotoLocked)} 
                   alt={profile.name} 
                   className="w-24 h-24 rounded-full object-cover border-4 border-slate-100 shadow-md"
                   referrerPolicy="no-referrer"
@@ -207,7 +208,7 @@ export const ProfileDetails: React.FC<ProfileDetailsProps> = ({
 
             {isPhotoLocked && (
               <p className="text-[11px] text-emerald-700 bg-emerald-50 px-3 py-1 rounded-xl">
-                🔒 هذا العضو جعل صورته مرئية حصرياً لمن يتبادل معهم قبول الاهتمام.
+                {profile.photoPrivacy === "hidden" ? "🔒 هذا العضو يفضل عدم إظهار صورته الشخصية مؤقتاً." : "🔒 هذا العضو جعل صورته مرئية حصرياً لمن يتبادل معهم قبول الاهتمام."}
               </p>
             )}
 

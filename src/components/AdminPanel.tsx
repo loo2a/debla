@@ -1,7 +1,9 @@
 import React, { useState } from "react";
+import { Navigate } from "react-router-dom";
 import { useApp } from "../lib/store";
 import { useUIStore } from "../stores/uiStore";
 import { Gender } from "../types";
+import { getAvatarUrl } from "../lib/avatarUtils";
 import { 
   Shield, Users, Sparkles, Check, X, AlertTriangle, 
   Trash2, Award, ShieldCheck, Database, Copy, RefreshCw, CheckCircle2 
@@ -9,7 +11,7 @@ import {
 
 export const AdminPanel: React.FC = () => {
   const { 
-    profiles, premiumRequests, interactions, successStories, dbError, isSupabaseLoading,
+    isAdmin, profiles, premiumRequests, interactions, successStories, dbError, isSupabaseLoading,
     adminApprovePremium, adminRejectPremium, adminVerifyUser, 
     adminDeleteUser, adminApproveStory, retryLoadData
   } = useApp();
@@ -17,6 +19,11 @@ export const AdminPanel: React.FC = () => {
 
   const [activeTab, setActiveTab] = useState<"requests" | "users" | "reports" | "stories">("requests");
   const [isRetrying, setIsRetrying] = useState(false);
+
+  // Security Guard: Only admins can view this panel
+  if (!isAdmin) {
+    return <Navigate to="/" replace />;
+  }
 
   const pendingRequests = premiumRequests.filter(r => r.status === "pending");
   const verifiedProfiles = profiles.filter(p => p.name !== "");
@@ -215,7 +222,7 @@ export const AdminPanel: React.FC = () => {
                 <div key={user.id} className="bg-white rounded-2xl border border-slate-100 p-4 shadow-sm flex justify-between items-center gap-3">
                   <div className="flex items-center gap-3 overflow-hidden">
                     <img 
-                      src={user.profileImage || `https://images.unsplash.com/photo-${user.avatar === "male_1" ? "1534528741775-53994a69daeb" : user.avatar === "female_1" ? "1494790108377-be9c29b29330" : "1507003211169-0a1dd7228f2d"}?auto=format&fit=crop&w=150&q=80`} 
+                      src={getAvatarUrl(user)} 
                       alt="" 
                       className="w-12 h-12 rounded-full object-cover border border-slate-200"
                       referrerPolicy="no-referrer"
