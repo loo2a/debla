@@ -66,3 +66,56 @@ self.addEventListener("fetch", (event) => {
       })
   );
 });
+
+// Push Event: Handle background push messages from FCM or Supabase Webhooks
+self.addEventListener("push", (event) => {
+  let payload = {
+    title: "مودة ورحمة",
+    body: "لديك إشعار جديد في حسابك المبارك",
+    icon: "/icon-192.png",
+    badge: "/icon-192.png",
+    data: { url: "/" },
+  };
+
+  if (event.data) {
+    try {
+      const data = event.data.json();
+      payload = { ...payload, ...data };
+    } catch {
+      payload.body = event.data.text();
+    }
+  }
+
+  event.waitUntil(
+    self.registration.showNotification(payload.title, {
+      body: payload.body,
+      icon: payload.icon || "/icon-192.png",
+      badge: payload.badge || "/icon-192.png",
+      vibrate: [200, 100, 200],
+      data: payload.data || { url: "/" },
+      dir: "rtl",
+      lang: "ar",
+    })
+  );
+});
+
+// Notification Click Event: Focus existing window or open app
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  const targetUrl = event.notification.data?.url || "/";
+
+  event.waitUntil(
+    clients.matchAll({ type: "window", includeUncontrolled: true }).then((clientList) => {
+      for (const client of clientList) {
+        if (client.url.includes(self.location.origin) && "focus" in client) {
+          client.navigate(targetUrl);
+          return client.focus();
+        }
+      }
+      if (clients.openWindow) {
+        return clients.openWindow(targetUrl);
+      }
+    })
+  );
+});
+

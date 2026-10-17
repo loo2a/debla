@@ -1,0 +1,40 @@
+{
+  "name": "الزواج الإسلامي - مودة ورحمة",
+  "short_name": "مودة ورحمة",
+  "description": "منصة إسلامية موثوقة للتعارف بغرض الزواج الشرعي بضوابط الشريعة وحماية الخصوصية.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f8fafc",
+  "theme_color": "#065f46",
+  "dir": "rtl",
+  "lang": "ar",
+  "orientation": "portrait-primary",
+  "scope": "/",
+  "categories": ["social", "lifestyle"],
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-maskable.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}

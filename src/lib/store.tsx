@@ -700,6 +700,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         p_marital_status: filter.maritalStatus,
         p_religious_commitment: filter.religiousCommitment,
         p_education: filter.education,
+        p_prayers: filter.prayers,
+        p_smoking: filter.smoking,
+        p_min_height: filter.minHeight,
+        p_max_height: filter.maxHeight,
+        p_is_verified_only: filter.isVerifiedOnly || false,
+        p_hijab_type: filter.hijabType,
+        p_has_beard: filter.hasBeard,
         p_search_query: filter.searchQuery,
         p_sort_by: filter.sortBy || "latest",
         p_page: filter.page || 1,
@@ -729,6 +736,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       if (filter.residence && p.residence !== filter.residence) return false;
       if (filter.nationality && p.nationality !== filter.nationality) return false;
       if (filter.maritalStatus && p.maritalStatus !== filter.maritalStatus) return false;
+      if (filter.religiousCommitment && p.religiousCommitment !== filter.religiousCommitment) return false;
+      if (filter.education && p.education !== filter.education) return false;
+      if (filter.prayers && p.prayers !== filter.prayers) return false;
+      if (filter.smoking !== undefined && p.isSmoker !== filter.smoking) return false;
+      if (filter.minHeight && p.height < filter.minHeight) return false;
+      if (filter.maxHeight && p.height > filter.maxHeight) return false;
+      if (filter.isVerifiedOnly && !p.isVerified) return false;
+      if (filter.hijabType && p.hijabType !== filter.hijabType) return false;
+      if (filter.hasBeard !== undefined && p.hasBeard !== filter.hasBeard) return false;
       if (filter.searchQuery) {
         const q = filter.searchQuery.toLowerCase();
         const matches = p.name.toLowerCase().includes(q) ||

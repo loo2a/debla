@@ -1,8 +1,9 @@
-import React, { Suspense, lazy } from "react";
+import React, { Suspense, lazy, useEffect } from "react";
 import { Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { AppProvider, useApp } from "./lib/store";
 import { supabaseConfigError } from "./lib/supabase";
 import { useUIStore } from "./stores/uiStore";
+import { NativeBridge } from "./lib/nativeBridge";
 import { AuthFlow } from "./components/AuthFlow";
 import { Sidebar } from "./components/Sidebar";
 import { BottomBar } from "./components/BottomBar";
@@ -44,6 +45,22 @@ const PageLoadingFallback: React.FC = () => (
 const AppContent: React.FC = () => {
   const { currentUser, isAuthReady, dbError, retryLoadData, logout } = useApp();
   const { isSidebarOpen, setSidebarOpen } = useUIStore();
+
+  useEffect(() => {
+    if (isAuthReady) {
+      void NativeBridge.hideSplashScreen();
+      NativeBridge.setupBackButton(() => {
+        if (window.location.pathname === "/" || window.location.pathname === "") {
+          // Native exit handled by OS
+        } else {
+          window.history.back();
+        }
+      });
+      if (currentUser?.id) {
+        void NativeBridge.initPushNotifications(currentUser.id);
+      }
+    }
+  }, [isAuthReady, currentUser?.id]);
 
   // Waiting for Supabase to restore the session
   if (!isAuthReady) {

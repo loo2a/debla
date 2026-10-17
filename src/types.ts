@@ -143,6 +143,13 @@ export interface SearchProfilesFilter {
   maritalStatus?: string;
   religiousCommitment?: string;
   education?: string;
+  prayers?: string;
+  smoking?: boolean;
+  minHeight?: number;
+  maxHeight?: number;
+  isVerifiedOnly?: boolean;
+  hijabType?: string;
+  hasBeard?: boolean;
   searchQuery?: string;
   sortBy?: "latest" | "age_asc" | "age_desc" | "activity";
   page?: number;

@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#064e3b" />
+      <stop offset="50%" stop-color="#065f46" />
+      <stop offset="100%" stop-color="#047857" />
+    </linearGradient>
+    <linearGradient id="gold" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fef08a" />
+      <stop offset="50%" stop-color="#eab308" />
+      <stop offset="100%" stop-color="#ca8a04" />
+    </linearGradient>
+  </defs>
+  <!-- Background -->
+  <rect width="512" height="512" rx="128" fill="url(#bg)" />
+  
+  <!-- Outer Decorative Ring -->
+  <circle cx="256" cy="256" r="210" fill="none" stroke="url(#gold)" stroke-width="6" stroke-opacity="0.4" stroke-dasharray="12 8" />
+  <circle cx="256" cy="256" r="195" fill="none" stroke="url(#gold)" stroke-width="2" stroke-opacity="0.6" />
+
+  <!-- Two Interlocked Wedding Rings (Symbolizing Halal Marriage) -->
+  <g transform="translate(0, -10)">
+    <!-- Right Ring -->
+    <circle cx="285" cy="245" r="75" fill="none" stroke="url(#gold)" stroke-width="18" />
+    <!-- Left Ring -->
+    <circle cx="225" cy="245" r="75" fill="none" stroke="#ffffff" stroke-width="18" stroke-opacity="0.95" />
+    <!-- Heart Accent -->
+    <path d="M 256 160 C 256 140, 230 130, 220 145 C 210 130, 184 140, 184 160 C 184 185, 220 205, 220 205 C 220 205, 256 185, 256 160 Z" fill="url(#gold)" transform="translate(36, -30) scale(0.85)" />
+  </g>
+
+  <!-- Typography / Calligraphic Tagline -->
+  <text x="256" y="380" font-family="'Cairo', sans-serif" font-size="44" font-weight="900" fill="#ffffff" text-anchor="middle" letter-spacing="1">مودة ورحمة</text>
+  <text x="256" y="420" font-family="'Cairo', sans-serif" font-size="20" font-weight="600" fill="url(#gold)" text-anchor="middle" opacity="0.9">الزواج الإسلامي الشرعي</text>
+</svg>

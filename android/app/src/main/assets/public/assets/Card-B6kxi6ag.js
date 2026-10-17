@@ -1,0 +1,1 @@
+import{j as t}from"./vendor-core-DD5_VbL5.js";const e=({className:s="",children:r,...o})=>t.jsx("div",{className:`bg-white rounded-2xl border border-slate-100 shadow-sm transition ${s}`,...o,children:r});export{e as C};
