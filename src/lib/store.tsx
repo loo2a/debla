@@ -484,10 +484,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const signInWithGoogle = async (): Promise<ActionResult> => {
     try {
+      // ضمان تمرير رابط الأصل بشكل سليم مع slash
+      const redirectUrl = window.location.origin.endsWith("/")
+        ? window.location.origin
+        : `${window.location.origin}/`;
+
       const { error } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: {
-          redirectTo: window.location.origin,
+          redirectTo: redirectUrl,
           queryParams: {
             access_type: "offline",
             prompt: "consent",
