@@ -266,8 +266,49 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const allProfiles = (profilesRes.data ?? []).map((row: any) =>
         toProfile(row, privateById.get(row.id), sensitiveById.get(row.id), prefById.get(row.id))
       );
-      const me = allProfiles.find(p => p.id === userId);
-      if (!me) throw new Error("profile_missing");
+      let me = allProfiles.find(p => p.id === userId);
+
+      // 1. استعلام مباشر عن ملف المستخدم إذا لم يكن ضمن الـ 100 الأولى
+      if (!me) {
+        const { data: myRow } = await supabase.from("profiles").select("*").eq("id", userId).maybeSingle();
+        if (myRow) {
+          me = toProfile(myRow, privateById.get(userId), sensitiveById.get(userId), prefById.get(userId));
+          allProfiles.push(me);
+        }
+      }
+
+      // 2. محاولة استدعاء دالة الإصلاح وضمان الملف الشخصي من السيرفر
+      if (!me) {
+        const { data: createdRow } = await supabase.rpc("ensure_my_profile");
+        if (createdRow) {
+          me = toProfile(createdRow, privateById.get(userId), sensitiveById.get(userId), prefById.get(userId));
+          allProfiles.push(me);
+        }
+      }
+
+      // 3. الحصن الأخير: إنشاء نموذج محلي للمستخدم الجديد حتى يكمل التسجيل فوراً دون أي شاشة خطأ
+      if (!me) {
+        const { data: userData } = await supabase.auth.getUser();
+        const googleUser = userData?.user;
+        const initialName = googleUser?.user_metadata?.full_name || googleUser?.user_metadata?.name || "";
+        const initialEmail = googleUser?.email || "";
+
+        me = {
+          id: userId,
+          memberNumber: "MEMBER-" + userId.slice(0, 5),
+          name: initialName,
+          email: initialEmail,
+          agreedToCharter: false,
+          gender: "male" as any,
+          avatar: "male_1",
+          age: 25,
+          nationality: "مصر",
+          residence: "مصر",
+          joinDate: new Date().toISOString().split("T")[0],
+          viewsCount: 0,
+        } as UserProfile;
+        allProfiles.push(me);
+      }
 
       setIsAdmin(adminRes.data === true);
       setProfiles(allProfiles);
@@ -585,8 +626,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (Object.keys(profileData).length > 0) {
       const { data, error } = await supabase
         .from("profiles")
-        .update(profileData)
-        .eq("id", currentUser.id)
+        .upsert({ id: currentUser.id, ...profileData })
         .select()
         .single();
       if (error) return fail(error);
@@ -617,8 +657,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (mobile !== undefined && mobile !== currentUser.mobile) {
       const { error } = await supabase
         .from("profile_private")
-        .update({ mobile })
-        .eq("id", currentUser.id);
+        .upsert({ id: currentUser.id, mobile });
       if (error) return fail(error);
       merged = { ...merged, mobile, isMobileVerified: false };
     }
