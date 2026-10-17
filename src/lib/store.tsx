@@ -32,6 +32,7 @@ interface AppContextType {
   // Auth & Profile Actions
   requestEmailOtp: (email: string) => Promise<ActionResult>;
   verifyEmailOtp: (email: string, code: string) => Promise<ActionResult>;
+  signInWithGoogle: () => Promise<ActionResult>;
   submitCharterAgreement: () => Promise<ActionResult>;
   saveProfile: (profile: Partial<UserProfile>) => Promise<ActionResult>;
   updateProfile: (profile: Partial<UserProfile>) => Promise<ActionResult>;
@@ -119,10 +120,16 @@ const toAuthErrorMessage = (err: any): string => {
   if (status === 429 || /rate limit|too many/i.test(message)) {
     return "تم تجاوز عدد المحاولات المسموح بها. يرجى الانتظار قليلاً ثم المحاولة مرة أخرى.";
   }
+  if (status === 500 || /internal server error|error sending confirmation|error sending/i.test(message)) {
+    return "واجه خادم Supabase مشكلة في إرسال البريد (غالباً بسبب استهلاك الحد الأقصى للإرسال المجاني لـ Supabase بالساعة، أو الحاجة لضبط SMTP).";
+  }
+  if (/database error/i.test(message)) {
+    return "خطأ في قاعدة بيانات Supabase عند إنشاء المستخدم الجديد.";
+  }
   if (/expired|invalid|token/i.test(message)) return "رمز التحقق غير صحيح أو منتهي الصلاحية.";
   if (/email/i.test(message)) return "البريد الإلكتروني غير صالح.";
   if (/Failed to fetch|NetworkError/i.test(message)) return "تعذر الاتصال بالخادم. تحقق من الإنترنت وحاول مرة أخرى.";
-  return "تعذر إتمام العملية، حاول مرة أخرى.";
+  return err?.message || "تعذر إتمام العملية، حاول مرة أخرى.";
 };
 
 const toProfile = (row: any, priv?: any, sensitive?: any, pref?: any): UserProfile => ({
@@ -473,6 +480,25 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     });
     if (error) return { ok: false, error: toAuthErrorMessage(error) };
     return { ok: true };
+  };
+
+  const signInWithGoogle = async (): Promise<ActionResult> => {
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: {
+          redirectTo: window.location.origin,
+          queryParams: {
+            access_type: "offline",
+            prompt: "consent",
+          },
+        },
+      });
+      if (error) return { ok: false, error: toAuthErrorMessage(error) };
+      return { ok: true };
+    } catch (err) {
+      return fail(err);
+    }
   };
 
   const logout = async () => {
@@ -991,6 +1017,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
       requestEmailOtp,
       verifyEmailOtp,
+      signInWithGoogle,
       submitCharterAgreement,
       saveProfile,
       updateProfile,

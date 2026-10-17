@@ -14,6 +14,7 @@ import { ReviewPromptModal } from "./components/ReviewPromptModal";
 import { ErrorBoundary } from "./components/ui/ErrorBoundary";
 import { Skeleton, ProfileCardSkeleton } from "./components/ui/Skeleton";
 import { Button } from "./components/ui/Button";
+import { SplashScreen } from "./components/ui/SplashScreen";
 
 // Lazy-loaded routes for optimal bundle splitting and performance
 const Dashboard = lazy(() => import("./components/Dashboard").then(m => ({ default: m.Dashboard })));
@@ -66,12 +67,7 @@ const AppContent: React.FC = () => {
 
   // Waiting for Supabase to restore the session
   if (!isAuthReady) {
-    return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-slate-50 gap-3 text-slate-500 text-sm" dir="rtl">
-        <div className="w-10 h-10 border-3 border-emerald-600 border-t-transparent rounded-full animate-spin" />
-        <p className="font-semibold text-slate-600 text-xs">جاري تهيئة المنصة والمصادقة الشرعية...</p>
-      </div>
-    );
+    return <SplashScreen />;
   }
 
   // Logged in but data could not be loaded (e.g. database migration not applied)
