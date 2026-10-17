@@ -15,7 +15,6 @@ export const DeleteAccountPage: React.FC = () => {
   const [isDeleting, setIsDeleting] = useState(false);
   const [directDeleteError, setDirectDeleteError] = useState<string | null>(null);
 
-  // If user is already logged in, they can execute direct deletion
   const handleLoggedInDelete = async () => {
     if (!window.confirm("تحذير نهائي: هل أنت متأكد تماماً من رغبتك في حذف حسابك ومسح جميع بياناتك وصورك بشكل لا رجعة فيه؟")) {
       return;
@@ -24,7 +23,6 @@ export const DeleteAccountPage: React.FC = () => {
     setIsDeleting(true);
     setDirectDeleteError(null);
     try {
-      // We will call the delete account method from store or supabase directly
       const { supabase } = await import("../lib/supabase");
       const { data, error } = await supabase.rpc("delete_my_account_rpc");
       if (error) {
@@ -96,7 +94,6 @@ export const DeleteAccountPage: React.FC = () => {
               </p>
             </div>
 
-            {/* If logged in */}
             {currentUser ? (
               <div className="border border-slate-200 rounded-2xl p-5 space-y-4 bg-slate-50/50">
                 <div>
@@ -120,7 +117,6 @@ export const DeleteAccountPage: React.FC = () => {
                 </Button>
               </div>
             ) : (
-              /* If public / not logged in request form */
               <form onSubmit={handleWebFormSubmit} className="space-y-4">
                 <div className="space-y-1">
                   <h3 className="font-bold text-slate-800 text-sm">تقديم طلب حذف حساب خارجي:</h3>
