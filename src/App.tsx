@@ -25,9 +25,9 @@ const InterestsPage = lazy(() => import("./pages/InterestsPage").then(m => ({ de
 const IgnoredPage = lazy(() => import("./pages/IgnoredPage").then(m => ({ default: m.IgnoredPage })));
 const WhoInterestedPage = lazy(() => import("./pages/WhoInterestedPage").then(m => ({ default: m.WhoInterestedPage })));
 const ContactPage = lazy(() => import("./pages/ContactPage").then(m => ({ default: m.ContactPage })));
-const PrivacyPolicyPage = lazy(() => import("./pages/PrivacyPolicyPage").then(m => ({ default: m.PrivacyPolicyPage })));
-const TermsPage = lazy(() => import("./pages/TermsPage").then(m => ({ default: m.TermsPage })));
-const DeleteAccountPage = lazy(() => import("./pages/DeleteAccountPage").then(m => ({ default: m.DeleteAccountPage })));
+const PrivacyPolicyPage = lazy(() => import("./../pages/PrivacyPolicyPage").then(m => ({ default: m.PrivacyPolicyPage })));
+const TermsPage = lazy(() => import("./../pages/TermsPage").then(m => ({ default: m.TermsPage })));
+const DeleteAccountPage = lazy(() => import("./../pages/DeleteAccountPage").then(m => ({ default: m.DeleteAccountPage })));
 
 const PageLoadingFallback: React.FC = () => (
   <div className="p-4 space-y-4 max-w-md mx-auto pt-8" dir="rtl">
