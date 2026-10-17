@@ -302,7 +302,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   useEffect(() => {
     LEGACY_STORAGE_KEYS.forEach(key => localStorage.removeItem(key));
 
+    const cleanOAuthHash = () => {
+      if (typeof window !== "undefined" && window.location.hash && window.location.hash.includes("access_token")) {
+        window.history.replaceState(null, "", window.location.pathname + window.location.search);
+      }
+    };
+
     const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
+      cleanOAuthHash();
       if (event === "SIGNED_OUT" || !session) {
         resetState();
         setDbError(null);
@@ -310,6 +317,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         return;
       }
       setTimeout(() => { void loadAll(session.user.id); }, 0);
+    });
+
+    // فحص الجلسة الحالية والتأكد من تهيئة الحالة
+    void supabase.auth.getSession().then(({ data }) => {
+      if (data.session) {
+        cleanOAuthHash();
+        void loadAll(data.session.user.id);
+      } else {
+        setIsAuthReady(true);
+      }
     });
 
     return () => sub.subscription.unsubscribe();
