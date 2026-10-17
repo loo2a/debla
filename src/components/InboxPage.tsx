@@ -6,17 +6,39 @@ import {
   Trash2, ShieldCheck, ChevronLeft, ArrowRight, Sparkles, Lock 
 } from "lucide-react";
 
+import { useParams, useNavigate } from "react-router-dom";
+
 interface InboxPageProps {
-  selectedChatUserId: string | null;
-  onCloseChat: () => void;
-  onOpenChat: (userId: string) => void;
+  selectedChatUserId?: string | null;
+  onCloseChat?: () => void;
+  onOpenChat?: (userId: string) => void;
 }
 
 export const InboxPage: React.FC<InboxPageProps> = ({ 
-  selectedChatUserId, 
-  onCloseChat, 
-  onOpenChat 
+  selectedChatUserId: propSelectedChatUserId, 
+  onCloseChat: propOnCloseChat, 
+  onOpenChat: propOnOpenChat 
 }) => {
+  const params = useParams<{ chatUserId?: string }>();
+  const navigate = useNavigate();
+  const selectedChatUserId = propSelectedChatUserId ?? (params.chatUserId || null);
+
+  const handleCloseChat = () => {
+    if (propOnCloseChat) {
+      propOnCloseChat();
+    } else {
+      navigate("/inbox");
+    }
+  };
+
+  const handleOpenChat = (userId: string) => {
+    if (propOnOpenChat) {
+      propOnOpenChat(userId);
+    } else {
+      navigate(`/inbox/${userId}`);
+    }
+  };
+
   const { 
     currentUser, messages, notifications, profiles, sendMessage, 
     markMessagesAsRead, markNotificationAsRead, markAllNotificationsAsRead 
@@ -27,10 +49,6 @@ export const InboxPage: React.FC<InboxPageProps> = ({
   const chatBottomRef = useRef<HTMLDivElement>(null);
 
   if (!currentUser) return null;
-
-  // Opposite gender profiles for preloading simulated conversations
-  const oppositeGender = currentUser.gender === Gender.MALE ? Gender.FEMALE : Gender.MALE;
-  const matchProfiles = profiles.filter(p => p.gender === oppositeGender && p.name !== "");
 
   // Auto scroll to bottom in chat
   useEffect(() => {
@@ -45,15 +63,6 @@ export const InboxPage: React.FC<InboxPageProps> = ({
       markMessagesAsRead(selectedChatUserId);
     }
   }, [selectedChatUserId, messages]);
-
-  // Seed initial simulated message threads if they do not exist
-  useEffect(() => {
-    if (messages.length === 0 && matchProfiles.length > 0) {
-      // Seed a welcome message from the first compatible profile
-      const seedPartner = matchProfiles[0];
-      sendMessage(seedPartner.id, "السلام عليكم ورحمة الله وبركاته. لقد اطلعت على ملفك الشخصي الكريم ووجدت توافقاً كبيراً في اهتماماتي وتفاصيل تديني ومواصفاتي المطلوبة، ويسعدني ويشرفني التعارف الجاد في سياق هذا التطبيق الطيب.");
-    }
-  }, []);
 
   // Filter messages related to the current user
   const myMessages = messages.filter(m => m.senderId === currentUser.id || m.receiverId === currentUser.id);
@@ -86,25 +95,13 @@ export const InboxPage: React.FC<InboxPageProps> = ({
   const activeChatPartner = profiles.find(p => p.id === selectedChatUserId);
 
   // Handle send message
-  const handleSendMessage = (e: React.FormEvent) => {
+  const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!typedMessage || !selectedChatUserId) return;
+    const text = typedMessage.trim();
+    if (!text || !selectedChatUserId) return;
 
-    sendMessage(selectedChatUserId, typedMessage);
-    const sentText = typedMessage;
-    setTypedMessage("");
-
-    // Simulate automatic prospective partner reply for high-fidelity testing
-    setTimeout(() => {
-      const responsePool = [
-        "جزاكم الله خيراً على صراحتكم ووضوحكم. حقيقةً تهمّني الجدية جداً وأرغب في مراجعة آرائكم في الرؤية الشرعية وطلب الأهل.",
-        "أهلاً بك أخي الكريم / أختي الفاضلة. يسعدني التواصل لمعرفة مدى التوافق، هل تفضل التحدث بوعي وصراحة في القضايمة والشروط المالية أولاً؟",
-        "وعليكم السلام ورحمة الله وبركاته، قرأت ملفك وأحيي فيك هذا التدين والالتزام الطيب. دعنا نتناقش أكثر في تفاصيل السكن المقترح والإقامة.",
-        "أشكرك على طيب كلماتك. تهمّني المحافظة والضوابط الأخلاقية بشدة، وسأكون حريصاً على إشراك أهلي فور ثبوت التوافق الفكري والروحي الأول بيننا."
-      ];
-      const randomResponse = responsePool[Math.floor(Math.random() * responsePool.length)];
-      sendMessage(selectedChatUserId, randomResponse);
-    }, 2000);
+    const res = await sendMessage(selectedChatUserId, text);
+    if (res.ok) setTypedMessage("");
   };
 
   // Filter user notifications
@@ -121,8 +118,9 @@ export const InboxPage: React.FC<InboxPageProps> = ({
             {/* Active Chat Header */}
             <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
               <button 
-                onClick={onCloseChat}
+                onClick={handleCloseChat}
                 className="p-1 text-slate-500 hover:text-slate-800 transition rounded-lg hover:bg-slate-100"
+                aria-label="الرجوع لقائمة المحادثات"
               >
                 <ArrowRight className="w-5 h-5" />
               </button>
@@ -139,7 +137,7 @@ export const InboxPage: React.FC<InboxPageProps> = ({
                     {activeChatPartner.name}
                     {activeChatPartner.isVerified && <ShieldCheck className="w-4 h-4 text-emerald-600" />}
                   </h4>
-                  <p className="text-[10px] text-slate-400 font-mono">عضوية رقم: {activeChatPartner.id} • {activeChatPartner.isOnline ? "نشط الآن" : "أوفلاين"}</p>
+                  <p className="text-[10px] text-slate-400 font-mono">عضوية رقم: {activeChatPartner.memberNumber} • {activeChatPartner.isOnline ? "نشط الآن" : "أوفلاين"}</p>
                 </div>
               </div>
 
@@ -185,8 +183,8 @@ export const InboxPage: React.FC<InboxPageProps> = ({
                 </p>
                 <button
                   onClick={() => {
-                    onCloseChat();
-                    setActiveTab("messages");
+                    handleCloseChat();
+                    navigate("/premium");
                   }}
                   className="bg-amber-500 hover:bg-amber-600 text-slate-950 font-extrabold text-xs px-5 py-2.5 rounded-xl transition shadow-md shadow-amber-500/10"
                 >
@@ -264,7 +262,7 @@ export const InboxPage: React.FC<InboxPageProps> = ({
                     {chatPartners.map(item => (
                       <div 
                         key={item.partner.id}
-                        onClick={() => onOpenChat(item.partner.id)}
+                        onClick={() => handleOpenChat(item.partner.id)}
                         className="p-4 hover:bg-slate-50 transition cursor-pointer flex justify-between items-center"
                       >
                         <div className="flex items-center gap-3 overflow-hidden">

@@ -1,29 +1,36 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { useParams, useNavigate } from "react-router-dom";
 import { useApp } from "../lib/store";
+import { useUIStore } from "../stores/uiStore";
 import { UserProfile, Gender, HijabType } from "../types";
 import { 
   Heart, EyeOff, Ban, AlertTriangle, MessageSquare, 
   Bookmark, ArrowRight, ShieldCheck, Sparkles, MapPin, 
-  User, CheckCircle, HelpCircle, Lock 
+  User, CheckCircle, HelpCircle, Lock, Check 
 } from "lucide-react";
 
 interface ProfileDetailsProps {
-  userId: string;
-  onBack: () => void;
-  onOpenChat: (userId: string) => void;
-  setActiveScreen: (screen: string) => void;
+  userId?: string;
+  onBack?: () => void;
+  onOpenChat?: (userId: string) => void;
+  setActiveScreen?: (screen: string) => void;
 }
 
 export const ProfileDetails: React.FC<ProfileDetailsProps> = ({ 
-  userId, 
-  onBack, 
-  onOpenChat,
-  setActiveScreen
+  userId: propUserId, 
+  onBack: propOnBack, 
+  onOpenChat: propOnOpenChat,
+  setActiveScreen: propSetActiveScreen
 }) => {
+  const params = useParams<{ userId: string }>();
+  const navigate = useNavigate();
+  const userId = propUserId || params.userId || "";
+
   const { 
-    currentUser, profiles, expressInterest, ignoreProfile, 
-    blockProfile, reportProfile, interactions 
+    currentUser, profiles, expressInterest, acceptInterest, ignoreProfile, 
+    blockProfile, reportProfile, interactions, recordProfileView 
   } = useApp();
+  const { addToast, showConfirm } = useUIStore();
 
   const [showReportModal, setShowReportModal] = useState(false);
   const [reportReason, setReportReason] = useState("");
@@ -32,54 +39,121 @@ export const ProfileDetails: React.FC<ProfileDetailsProps> = ({
 
   const profile = profiles.find(p => p.id === userId);
 
+  useEffect(() => {
+    if (profile?.id) {
+      void recordProfileView(profile.id);
+    }
+  }, [profile?.id]);
+
+  const handleBack = () => {
+    if (propOnBack) {
+      propOnBack();
+    } else {
+      navigate(-1);
+    }
+  };
+
+  const handleOpenChatScreen = (targetId: string) => {
+    if (propOnOpenChat) {
+      propOnOpenChat(targetId);
+    } else {
+      navigate(`/inbox/${targetId}`);
+    }
+  };
+
+  const handleGoToPremium = () => {
+    if (propSetActiveScreen) {
+      propSetActiveScreen("premium");
+    } else {
+      navigate("/premium");
+    }
+  };
+
   if (!profile) {
     return (
       <div className="p-8 text-center" dir="rtl">
         <p className="text-slate-600 font-bold">عذراً، لم يتم العثور على هذا العضو في قاعدة البيانات.</p>
-        <button onClick={onBack} className="mt-4 text-emerald-600 font-bold underline">العودة للبحث</button>
+        <button onClick={handleBack} className="mt-4 text-emerald-600 font-bold underline">العودة للبحث</button>
       </div>
     );
   }
 
   const isInterested = interactions.some(i => i.fromUserId === currentUser?.id && i.toUserId === profile.id && i.type === "interest");
+  const hasReceivedInterest = interactions.some(i => i.fromUserId === profile.id && i.toUserId === currentUser?.id && i.type === "interest");
+  const hasAcceptedInterest = interactions.some(i => 
+    (i.fromUserId === currentUser?.id && i.toUserId === profile.id && i.type === "accept_interest") ||
+    (i.fromUserId === profile.id && i.toUserId === currentUser?.id && i.type === "accept_interest")
+  );
   const isIgnored = interactions.some(i => i.fromUserId === currentUser?.id && i.toUserId === profile.id && i.type === "ignore");
   const isBlocked = interactions.some(i => i.fromUserId === currentUser?.id && i.toUserId === profile.id && i.type === "block");
 
-  const handleInterest = () => {
-    expressInterest(profile.id);
-    alert(`تم تسجيل إبدائك للاهتمام بـ ${profile.name} وإرسال إشعار لحظي فوراً!`);
-  };
+  const isPhotoLocked = profile.photoPrivacy === "accepted_interest_only" && !hasAcceptedInterest;
 
-  const handleIgnore = () => {
-    ignoreProfile(profile.id);
-    alert(`تم إضافة ${profile.name} إلى قائمة المتجاهلين لإخفاء ملفه.`);
-    onBack();
-  };
-
-  const handleBlock = () => {
-    const confirm = window.confirm("هل أنت متأكد من حظر هذا العضو بشكل كامل ونهائي؟ لن يتمكن من رؤيتك أو التواصل معك.");
-    if (confirm) {
-      blockProfile(profile.id);
-      alert(`تم حظر العضو بنجاح.`);
-      onBack();
+  const handleInterest = async () => {
+    const res = await expressInterest(profile.id);
+    if (res.ok) {
+      addToast(`تم تسجيل إبدائك للاهتمام بـ ${profile.name} وإرسال إشعار له.`, "success");
+    } else {
+      addToast(res.error || "فشل تسجيل الاهتمام", "error");
     }
   };
 
-  const handleReport = (e: React.FormEvent) => {
+  const handleAcceptInterest = async () => {
+    const res = await acceptInterest(profile.id);
+    if (res.ok) {
+      addToast(`تم قبول الاهتمام المتبادل بنجاح! تم فتح تفاصيل التواصل ورؤية الصورة.`, "success");
+    } else {
+      addToast(res.error || "فشل قبول الاهتمام", "error");
+    }
+  };
+
+  const handleIgnore = async () => {
+    const res = await ignoreProfile(profile.id);
+    if (res.ok) {
+      addToast(`تم إضافة ${profile.name} إلى قائمة المتجاهلين لإخفاء ملفه.`, "info");
+      handleBack();
+    } else {
+      addToast(res.error || "فشل تجاهل الملف", "error");
+    }
+  };
+
+  const handleBlock = () => {
+    showConfirm({
+      title: "حظر نهائي للعضو",
+      message: "هل أنت متأكد من حظر هذا العضو بشكل كامل ونهائي؟ لن يتمكن من رؤيتك أو التواصل معك إطلاقاً.",
+      confirmText: "تأكيد الحظر",
+      isDangerous: true,
+      onConfirm: async () => {
+        const res = await blockProfile(profile.id);
+        if (res.ok) {
+          addToast("تم حظر العضو بنجاح.", "success");
+          handleBack();
+        } else {
+          addToast(res.error || "فشل حظر العضو", "error");
+        }
+      }
+    });
+  };
+
+  const handleReport = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!reportReason) return;
+    if (!reportReason.trim()) return;
     
-    reportProfile(profile.id, reportReason);
-    alert("شكرًا لك. تم تقديم البلاغ للتحقق والمراجعة العاجلة من إدارة التطبيق لضمان الحفاظ على أمان ومستوى جدية المجتمع.");
-    setShowReportModal(false);
-    setReportReason("");
+    const res = await reportProfile(profile.id, reportReason);
+    if (res.ok) {
+      addToast("تم تقديم البلاغ للتحقق والمراجعة العاجلة من إدارة التطبيق.", "success");
+      setShowReportModal(false);
+      setReportReason("");
+    } else {
+      addToast(res.error || "فشل تقديم البلاغ", "error");
+    }
   };
 
   const handleMessageClick = () => {
     if (!currentUser?.isPremium) {
       setShowPremiumBlocker(true);
     } else {
-      onOpenChat(profile.id);
+      handleOpenChatScreen(profile.id);
     }
   };
 
@@ -89,13 +163,13 @@ export const ProfileDetails: React.FC<ProfileDetailsProps> = ({
       {/* Back Header */}
       <div className="bg-white border-b border-slate-100 px-6 py-4 flex justify-between items-center sticky top-0 z-20 shadow-sm">
         <button 
-          onClick={onBack}
+          onClick={handleBack}
           className="flex items-center gap-1.5 text-slate-600 hover:text-slate-900 transition font-semibold text-sm"
         >
           <ArrowRight className="w-5 h-5" />
           <span>العودة للبحث</span>
         </button>
-        <span className="text-xs text-slate-400 font-mono">تفاصيل العضو رقم {profile.id}</span>
+        <span className="text-xs text-slate-400 font-mono">تفاصيل العضو رقم {profile.memberNumber}</span>
       </div>
 
       <div className="max-w-xl mx-auto px-4 mt-6 space-y-6">
@@ -111,12 +185,19 @@ export const ProfileDetails: React.FC<ProfileDetailsProps> = ({
 
           <div className="flex flex-col items-center text-center space-y-3 pt-2">
             <div className="relative">
-              <img 
-                src={profile.profileImage || `https://images.unsplash.com/photo-${profile.avatar === "male_1" ? "1534528741775-53994a69daeb" : profile.avatar === "female_1" ? "1494790108377-be9c29b29330" : "1507003211169-0a1dd7228f2d"}?auto=format&fit=crop&w=150&q=80`} 
-                alt={profile.name} 
-                className="w-24 h-24 rounded-full object-cover border-4 border-slate-100 shadow-md"
-                referrerPolicy="no-referrer"
-              />
+              {isPhotoLocked ? (
+                <div className="w-24 h-24 rounded-full bg-slate-100 border-4 border-slate-200 shadow-md flex flex-col items-center justify-center text-slate-500">
+                  <Lock className="w-7 h-7 text-emerald-600 mb-1" />
+                  <span className="text-[9px] font-bold">صورة خاصة</span>
+                </div>
+              ) : (
+                <img 
+                  src={profile.profileImage || `https://images.unsplash.com/photo-${profile.avatar === "male_1" ? "1534528741775-53994a69daeb" : profile.avatar === "female_1" ? "1494790108377-be9c29b29330" : "1507003211169-0a1dd7228f2d"}?auto=format&fit=crop&w=150&q=80`} 
+                  alt={profile.name} 
+                  className="w-24 h-24 rounded-full object-cover border-4 border-slate-100 shadow-md"
+                  referrerPolicy="no-referrer"
+                />
+              )}
               {profile.isVerified && (
                 <div className="absolute bottom-0 right-0 bg-emerald-600 text-white p-1 rounded-full border-2 border-white shadow">
                   <ShieldCheck className="w-4 h-4" />
@@ -124,11 +205,17 @@ export const ProfileDetails: React.FC<ProfileDetailsProps> = ({
               )}
             </div>
 
+            {isPhotoLocked && (
+              <p className="text-[11px] text-emerald-700 bg-emerald-50 px-3 py-1 rounded-xl">
+                🔒 هذا العضو جعل صورته مرئية حصرياً لمن يتبادل معهم قبول الاهتمام.
+              </p>
+            )}
+
             <div className="space-y-1">
               <h3 className="text-xl font-extrabold text-slate-800 flex items-center justify-center gap-1.5">
                 {profile.name}
               </h3>
-              <p className="text-xs text-slate-400 font-mono">عضوية رقم فريد: {profile.id} • انضم في: {profile.joinDate}</p>
+              <p className="text-xs text-slate-400 font-mono">عضوية رقم فريد: {profile.memberNumber} • انضم في: {profile.joinDate}</p>
             </div>
 
             <div className="flex gap-2">
@@ -141,6 +228,26 @@ export const ProfileDetails: React.FC<ProfileDetailsProps> = ({
             </div>
           </div>
         </div>
+
+        {/* Mutual interest incoming alert banner */}
+        {hasReceivedInterest && !hasAcceptedInterest && (
+          <div className="bg-gradient-to-r from-pink-500 to-rose-500 rounded-2xl p-4 text-white shadow-md flex items-center justify-between gap-3">
+            <div className="space-y-0.5">
+              <h4 className="font-bold text-xs flex items-center gap-1">
+                <Heart className="w-4 h-4 fill-white" />
+                <span>أبدى هذا العضو اهتمامه بملفك الشخصي!</span>
+              </h4>
+              <p className="text-[11px] text-pink-100">قبولك للاهتمام سيتيح لكما بدء المحادثة المباشرة ورؤية الصورة الشخصية.</p>
+            </div>
+            <button
+              onClick={handleAcceptInterest}
+              className="px-3.5 py-2 bg-white text-rose-600 rounded-xl text-xs font-bold hover:bg-pink-50 transition flex items-center gap-1 flex-shrink-0 shadow"
+            >
+              <Check className="w-3.5 h-3.5" />
+              <span>قبول الاهتمام</span>
+            </button>
+          </div>
+        )}
 
         {/* Dynamic Action Buttons bar */}
         <div className="bg-white rounded-2xl border border-slate-100 p-4 shadow-sm flex justify-around gap-2">
@@ -473,7 +580,7 @@ export const ProfileDetails: React.FC<ProfileDetailsProps> = ({
                 type="button"
                 onClick={() => {
                   setShowPremiumBlocker(false);
-                  setActiveScreen("premium");
+                  handleGoToPremium();
                 }}
                 className="w-2/3 py-2.5 bg-amber-500 hover:bg-amber-600 text-slate-950 rounded-xl text-xs font-extrabold transition shadow-md shadow-amber-500/10"
               >

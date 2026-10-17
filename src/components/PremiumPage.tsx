@@ -2,13 +2,17 @@ import React, { useState } from "react";
 import { useApp } from "../lib/store";
 import { Sparkles, CheckCircle2, CreditCard, Smartphone, HelpCircle, Send, ShieldAlert, PhoneCall } from "lucide-react";
 
+import { useUIStore } from "../stores/uiStore";
+
 export const PremiumPage: React.FC = () => {
   const { currentUser, submitPremiumRequest, premiumRequests } = useApp();
+  const { addToast } = useUIStore();
 
   const [selectedPlan, setSelectedPlan] = useState<"week" | "month" | "3months" | "6months" | "year">("month");
   const [paymentMethod, setPaymentMethod] = useState<"google_play" | "credit_card" | "mobile_wallet">("mobile_wallet");
   const [walletNumber, setWalletNumber] = useState("");
   const [hasSubmitted, setHasSubmitted] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   if (!currentUser) return null;
 
@@ -33,15 +37,25 @@ export const PremiumPage: React.FC = () => {
     "دعم فني خاص وهاتف استشارات للمساعدة في التوفيق والتحدث الشرعي.",
   ];
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (paymentMethod === "mobile_wallet" && !walletNumber) {
-      alert("يرجى إدخال رقم الهاتف المحول منه لتأكيد الحوالة والتحقق منها.");
+      addToast("يرجى إدخال رقم الهاتف المحول منه لتأكيد الحوالة والتحقق منها.", "error");
       return;
     }
 
-    submitPremiumRequest(selectedPlan, paymentMethod, walletNumber);
-    setHasSubmitted(true);
+    setIsSubmitting(true);
+    try {
+      const res = await submitPremiumRequest(selectedPlan, paymentMethod, walletNumber);
+      if (res.ok) {
+        setHasSubmitted(true);
+        addToast("تم إرسال طلب تفعيل باقة التميز بنجاح! سيتم المراجعة من الإدارة.", "success");
+      } else {
+        addToast(res.error || "فشل إرسال طلب التفعيل", "error");
+      }
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (

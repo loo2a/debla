@@ -1,20 +1,69 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://ai.google.dev/static/site-assets/images/share-ais-513315318.png" />
-</div>
+# تطبيق مودة ورحمة للزواج الإسلامي الشرعي
 
-# Run and deploy your AI Studio app
+منصة إسلامية موثوقة للتعارف بغرض الزواج الشرعي، مبنية بضوابط الشريعة الإسلامية وأعلى معايير حماية الخصوصية والأمان.
 
-This contains everything you need to run your app locally.
+---
 
-View your app in AI Studio: https://ai.studio/apps/29f2f49c-4f38-470d-b819-966ce34efed1
+## 🌟 الميزات الأساسية
 
-## Run Locally
+1. **المصادقة والأمان (Supabase Auth)**:
+   - تسجيل الدخول برمز تحقق لمرة واحدة (Email OTP) بدون كلمات مرور معرضة للتسريب.
+   - التحقق الصارم من حيازة البريد الإلكتروني والموبايل.
+   - حماية قواعد البيانات عبر **Row Level Security (RLS)** مشددة لضمان عدم اطلاع أي عضو إلا على ما يحق له شرعاً ونظاماً.
 
-**Prerequisites:**  Node.js
+2. **الخصوصية المتقدمة**:
+   - عزل بيانات الاتصال (الإيميل، رقم الموبايل) في جدول خاص `profile_private` لا يراه سوى صاحبه وإدارة المنصة.
+   - خيارات متعددة لخصوصية الصورة: (عامة، أو **"صورة لا يراها إلا من تقبل اهتمامه"**، أو مخفية مؤقتاً).
+   - **التصفح الخفي (Incognito Mode)** للأعضاء المشتركين لتصفح الملفات بحرية دون ترك أثر في الزيارات.
+   - نظام حظر متكامل يعزل المحظورين تماماً عن رؤية الملفات أو المراسلة.
 
+3. **البحث والترشيح المتقدم**:
+   - بحث سريع وبحث متقدم من السيرفر (`search_profiles_rpc`) يدعم الفلاتر (السن، بلد الإقامة، الجنسية، المؤهل، التدين، الحالة الاجتماعية).
+   - ترقيم الصفحات (Pagination) لضمان سرعة الاستجابة واستقرار الأداء.
 
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+4. **المحادثة والإشعارات الحية (Realtime)**:
+   - محادثات مشفرة ومحمية بـ RLS ومحدثة لحظياً عبر Supabase Realtime.
+   - إشعارات فورية بالاهتمام، الزيارات، الرسائل، والموافقات.
+
+5. **الحماية من الإساءة و Rate Limiting**:
+   - حد أقصى يومي للرسائل والاهتمامات لمنع الـ Spam والمضايقات.
+   - إدارة حقيقية عبر دوال Postgres RPC المشروطة بجدول الأدوار `user_roles`.
+
+---
+
+## 🚀 التشغيل المحلي (Local Development)
+
+### المتطلبات:
+- Node.js 22+
+- حساب Supabase مفعل
+
+### خطوات التشغيل:
+```bash
+# 1. تثبيت الحزم
+npm install
+
+# 2. إعداد متغيرات البيئة
+cp .env.example .env
+# قم بضبط VITE_SUPABASE_URL و VITE_SUPABASE_ANON_KEY
+
+# 3. تشغيل السيرفر المحلي
+npm run dev
+```
+
+---
+
+## 🗄️ تهيئة قاعدة البيانات (Migrations)
+
+توجد ملفات الـ SQL الجاهزة في المجلد `supabase/migrations/`:
+1. `20261017000001_phase0_security_foundation.sql`: الأساس الأمني وجداول النظام.
+2. `20261017000002_phase1_schema_features.sql`: الـ Schema الاحترافية (snake_case، الجداول المقسمة، دوال البحث، الزيارات، Rate Limits).
+3. `20261017000003_storage_setup.sql`: إعداد مخزن الصور `profile-photos` وسياسات الحماية.
+
+---
+
+## 🛠️ التقنيات المستخدمة
+
+- **Frontend**: React 19, TypeScript, Tailwind CSS v4, Motion
+- **Routing & State**: React Router, Zustand, TanStack Query
+- **Forms & Validation**: React Hook Form, Zod
+- **Backend & Database**: Supabase (PostgreSQL, Supabase Auth, Storage, Realtime, RPCs, RLS)

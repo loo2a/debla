@@ -1,4 +1,5 @@
 import React from "react";
+import { useNavigate } from "react-router-dom";
 import { useApp } from "../lib/store";
 import { Gender } from "../types";
 import { motion } from "motion/react";
@@ -9,8 +10,8 @@ import {
 
 interface DashboardProps {
   onOpenSidebar: () => void;
-  setActiveScreen: (screen: string) => void;
-  onSelectProfile: (userId: string) => void;
+  setActiveScreen?: (screen: string) => void;
+  onSelectProfile?: (userId: string) => void;
 }
 
 export const Dashboard: React.FC<DashboardProps> = ({ 
@@ -19,6 +20,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
   onSelectProfile
 }) => {
   const { currentUser, profiles, successStories } = useApp();
+  const navigate = useNavigate();
 
   if (!currentUser) return null;
 
@@ -30,7 +32,31 @@ export const Dashboard: React.FC<DashboardProps> = ({
   const matchingCount = oppositeGenderProfiles.length;
 
   const handleQuickMatchClick = () => {
-    setActiveScreen("search");
+    if (setActiveScreen) {
+      setActiveScreen("search");
+    }
+    navigate("/search");
+  };
+
+  const handleSelectCandidate = (userId: string) => {
+    if (onSelectProfile) {
+      onSelectProfile(userId);
+    }
+    navigate(`/profile/${userId}`);
+  };
+
+  const handleGoPremium = () => {
+    if (setActiveScreen) {
+      setActiveScreen("premium");
+    }
+    navigate("/premium");
+  };
+
+  const handleGoSuccessStories = () => {
+    if (setActiveScreen) {
+      setActiveScreen("success_stories");
+    }
+    navigate("/success-stories");
   };
 
   const activeStories = successStories.filter(s => s.isApproved).slice(0, 2);
@@ -43,6 +69,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
           <button 
             onClick={onOpenSidebar}
             className="p-2 hover:bg-slate-100 rounded-xl text-slate-700 transition duration-150"
+            aria-label="فتح القائمة الرئيسية"
           >
             <Menu className="w-6 h-6" />
           </button>
@@ -55,7 +82,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
         <div className="flex items-center gap-2">
           <img 
-            src={`https://images.unsplash.com/photo-${currentUser.avatar === "male_1" ? "1534528741775-53994a69daeb" : currentUser.avatar === "female_1" ? "1494790108377-be9c29b29330" : "1507003211169-0a1dd7228f2d"}?auto=format&fit=crop&w=150&q=80`} 
+            src={currentUser.profileImage || `https://images.unsplash.com/photo-${currentUser.avatar === "male_1" ? "1534528741775-53994a69daeb" : currentUser.avatar === "female_1" ? "1494790108377-be9c29b29330" : "1507003211169-0a1dd7228f2d"}?auto=format&fit=crop&w=150&q=80`} 
             alt={currentUser.name} 
             className="w-10 h-10 rounded-full object-cover border border-slate-200"
             referrerPolicy="no-referrer"
@@ -65,48 +92,37 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
       <div className="max-w-xl mx-auto px-4 mt-6 space-y-6">
         
-        {/* Verification Status Warning / Banner */}
-        {!currentUser.isVerified && (
-          <div className="bg-amber-50 border border-amber-200 p-4 rounded-2xl flex gap-3">
-            <AlertTriangle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
-            <div className="space-y-1">
-              <h4 className="font-bold text-amber-900 text-sm">حسابك في مرحلة المراجعة الأمنية</h4>
-              <p className="text-xs text-amber-800 leading-relaxed">
-                تقوم إدارة مودة ورحمة بالتحقق اليدوي من جدية الحسابات. ملفك الآن متاح للتصفح ولكن يحمل صفة قيد المراجعة.
-              </p>
-            </div>
-          </div>
-        )}
-
-        {/* Welcome Section */}
-        <div className="bg-gradient-to-br from-emerald-800 to-teal-800 rounded-3xl p-6 text-white relative overflow-hidden shadow-lg shadow-emerald-800/10">
-          <div className="absolute -left-10 -bottom-10 w-40 h-40 bg-white/10 rounded-full blur-2xl pointer-events-none" />
-          <div className="absolute -right-10 -top-10 w-40 h-40 bg-emerald-500/20 rounded-full blur-2xl pointer-events-none" />
-          
-          <div className="relative z-10 space-y-4">
-            <div className="space-y-1">
-              <span className="text-emerald-200 text-xs font-semibold">مرحباً بك مجدداً في مودة ورحمة</span>
-              <h2 className="text-xl font-bold">{currentUser.name || "عضو جاد"}</h2>
-              <p className="text-xs text-emerald-100 font-mono">عضوية رقم: {currentUser.id}</p>
-            </div>
-
-            <div className="flex gap-2">
-              {currentUser.isVerified && (
-                <span className="bg-emerald-500/30 text-emerald-300 text-xs px-2.5 py-1 rounded-full font-semibold border border-emerald-400/30 flex items-center gap-1">
-                  <CheckCircle className="w-3.5 h-3.5" />
-                  حساب موثق
+        {/* Welcome Section Banner */}
+        <div className="bg-gradient-to-l from-emerald-800 to-emerald-700 rounded-3xl p-6 text-white shadow-xl shadow-emerald-800/10 relative overflow-hidden">
+          <div className="absolute left-[-20px] bottom-[-20px] w-36 h-36 bg-emerald-600/30 rounded-full blur-xl pointer-events-none" />
+          <div className="space-y-2 relative z-10">
+            <div className="flex items-center gap-2">
+              <span className="bg-emerald-600/60 text-emerald-100 text-[10px] px-2.5 py-1 rounded-full font-semibold">
+                عضوية رقم {currentUser.memberNumber}
+              </span>
+              {currentUser.isPremium && (
+                <span className="bg-amber-400 text-slate-950 text-[10px] px-2 py-0.5 rounded-full font-bold flex items-center gap-1">
+                  <Sparkles className="w-3 h-3 fill-slate-950" />
+                  عضو متميز
                 </span>
               )}
-              {currentUser.isPremium ? (
-                <span className="bg-amber-500 text-slate-950 text-xs px-2.5 py-1 rounded-full font-bold flex items-center gap-1">
-                  <Sparkles className="w-3.5 h-3.5 fill-slate-950" />
-                  باقة التميز نشطة
-                </span>
-              ) : (
-                <span className="bg-white/10 hover:bg-white/20 text-white text-xs px-2.5 py-1 rounded-full font-semibold border border-white/20 flex items-center gap-1 transition cursor-pointer" onClick={() => setActiveScreen("premium")}>
-                  باقة مجانية (ترقية الآن)
-                </span>
-              )}
+            </div>
+
+            <h2 className="text-xl font-extrabold leading-snug">
+              أهلاً بك يا {currentUser.name}، بارك الله في سعيك
+            </h2>
+
+            <p className="text-xs text-emerald-100 leading-relaxed max-w-sm">
+              نسأل الله تعالى أن يكتب لك التوفيق والخير وأن يجمع بينكما على سنة نبيه ومودته ورحمته.
+            </p>
+
+            <div className="pt-2">
+              <button 
+                onClick={handleQuickMatchClick}
+                className="bg-white text-emerald-800 font-extrabold text-xs px-5 py-2.5 rounded-xl hover:bg-emerald-50 transition duration-150 shadow-md"
+              >
+                تصفح طلبات الزواج الآن
+              </button>
             </div>
           </div>
         </div>
@@ -155,7 +171,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
             {oppositeGenderProfiles.slice(0, 3).map(profile => (
               <div 
                 key={profile.id}
-                onClick={() => onSelectProfile(profile.id)}
+                onClick={() => handleSelectCandidate(profile.id)}
                 className="p-3 hover:bg-slate-50 rounded-xl transition cursor-pointer flex justify-between items-center"
               >
                 <div className="flex items-center gap-3">
@@ -193,7 +209,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
               </p>
             </div>
             <button 
-              onClick={() => setActiveScreen("premium")}
+              onClick={handleGoPremium}
               className="bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold text-xs px-5 py-2.5 rounded-xl transition shadow-md shadow-amber-500/15 relative z-10 whitespace-nowrap"
             >
               انضم للتميز الآن
@@ -235,7 +251,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
           </div>
 
           <button 
-            onClick={() => setActiveScreen("success_stories")}
+            onClick={handleGoSuccessStories}
             className="w-full py-2.5 border border-slate-200 text-slate-600 hover:bg-slate-50 text-xs font-bold rounded-xl transition text-center block"
           >
             تصفح المزيد من قصص النجاح والمباركات

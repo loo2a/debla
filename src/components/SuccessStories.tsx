@@ -2,8 +2,11 @@ import React, { useState } from "react";
 import { useApp } from "../lib/store";
 import { Award, Heart, Sparkles, Send, CheckCircle2, User, ChevronLeft } from "lucide-react";
 
+import { useUIStore } from "../stores/uiStore";
+
 export const SuccessStories: React.FC = () => {
   const { successStories, adminAddStory } = useApp();
+  const { addToast } = useUIStore();
 
   const [husband, setHusband] = useState("");
   const [wife, setWife] = useState("");
@@ -12,15 +15,20 @@ export const SuccessStories: React.FC = () => {
 
   const approvedStories = successStories.filter(s => s.isApproved);
 
-  const handleAddStory = (e: React.FormEvent) => {
+  const handleAddStory = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!husband || !wife || !storyText) return;
+    if (!husband.trim() || !wife.trim() || !storyText.trim()) return;
 
-    adminAddStory(husband, wife, storyText);
+    const res = await adminAddStory(husband, wife, storyText);
+    if (!res.ok) {
+      addToast(res.error || "فشل إرسال القصة", "error");
+      return;
+    }
     setSubmitted(true);
     setHusband("");
     setWife("");
     setStoryText("");
+    addToast("شكرًا لك! تم إرسال القصة للمراجعة والاعتماد المبارك.", "success");
   };
 
   return (

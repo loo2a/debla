@@ -1,38 +1,53 @@
 import React from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import { useApp } from "../lib/store";
 import { Home, Search, Sparkles, Bell } from "lucide-react";
 
 interface BottomBarProps {
-  activeScreen: string;
-  setActiveScreen: (screen: string) => void;
+  activeScreen?: string;
+  setActiveScreen?: (screen: string) => void;
 }
 
-export const BottomBar: React.FC<BottomBarProps> = ({ activeScreen, setActiveScreen }) => {
+export const BottomBar: React.FC<BottomBarProps> = ({ activeScreen: propActiveScreen, setActiveScreen: propSetActiveScreen }) => {
   const { currentUser, notifications } = useApp();
+  const location = useLocation();
+  const navigate = useNavigate();
 
   if (!currentUser) return null;
 
   const unreadCount = notifications.filter(n => n.userId === currentUser.id && !n.isRead).length;
 
   const tabs = [
-    { id: "home", label: "الرئيسية", icon: Home },
-    { id: "notifications", label: "البريد والاشعارات", icon: Bell, badge: unreadCount },
-    { id: "premium", label: "باقة التميز", icon: Sparkles, highlight: true },
-    { id: "search", label: "بحث", icon: Search },
+    { id: "home", path: "/", label: "الرئيسية", icon: Home },
+    { id: "notifications", path: "/inbox", label: "البريد والاشعارات", icon: Bell, badge: unreadCount },
+    { id: "premium", path: "/premium", label: "باقة التميز", icon: Sparkles, highlight: true },
+    { id: "search", path: "/search", label: "بحث", icon: Search },
   ];
 
+  const handleTabClick = (path: string, legacyId: string) => {
+    if (propSetActiveScreen) {
+      propSetActiveScreen(legacyId);
+    }
+    navigate(path);
+  };
+
   return (
-    <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-100 shadow-[0_-4px_24px_rgba(0,0,0,0.04)] z-30 font-sans" dir="rtl">
+    <nav 
+      aria-label="شريط التنقل السفلي"
+      className="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-100 shadow-[0_-4px_24px_rgba(0,0,0,0.04)] z-30 font-sans" 
+      dir="rtl"
+    >
       <div className="max-w-md mx-auto flex justify-around items-center h-16 px-2">
         {tabs.map(tab => {
-          const isActive = activeScreen === tab.id;
+          const isActive = location.pathname === tab.path || (tab.path !== "/" && location.pathname.startsWith(tab.path)) || propActiveScreen === tab.id;
           const Icon = tab.icon;
           
           return (
             <button
               key={tab.id}
-              onClick={() => setActiveScreen(tab.id)}
-              className="flex flex-col items-center justify-center flex-1 h-full relative group transition duration-150"
+              onClick={() => handleTabClick(tab.path, tab.id)}
+              className="flex flex-col items-center justify-center flex-1 h-full relative group transition duration-150 focus:outline-none"
+              aria-current={isActive ? "page" : undefined}
             >
               <div className={`p-1.5 rounded-xl transition duration-200 ${
                 tab.highlight 
@@ -63,6 +78,6 @@ export const BottomBar: React.FC<BottomBarProps> = ({ activeScreen, setActiveScr
           );
         })}
       </div>
-    </div>
+    </nav>
   );
 };

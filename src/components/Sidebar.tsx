@@ -1,5 +1,7 @@
 import React from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import { useApp } from "../lib/store";
+import { useUIStore } from "../stores/uiStore";
 import { motion, AnimatePresence } from "motion/react";
 import { 
   Home, Bell, User, Heart, EyeOff, Users, Award, 
@@ -9,37 +11,43 @@ import {
 interface SidebarProps {
   isOpen: boolean;
   onClose: () => void;
-  activeScreen: string;
-  setActiveScreen: (screen: string) => void;
+  activeScreen?: string;
+  setActiveScreen?: (screen: string) => void;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({ 
   isOpen, 
   onClose, 
-  activeScreen, 
-  setActiveScreen 
+  activeScreen: propActiveScreen, 
+  setActiveScreen: propSetActiveScreen 
 }) => {
-  const { currentUser, logout, notifications } = useApp();
+  const { currentUser, logout, notifications, isAdmin } = useApp();
+  const { addToast, showConfirm } = useUIStore();
+  const location = useLocation();
+  const navigate = useNavigate();
 
   if (!currentUser) return null;
 
-  const handleItemClick = (screen: string) => {
-    setActiveScreen(screen);
+  const handleItemClick = (path: string, legacyScreenId: string) => {
+    if (propSetActiveScreen) {
+      propSetActiveScreen(legacyScreenId);
+    }
+    navigate(path);
     onClose();
   };
 
   const unreadNotifications = notifications.filter(n => n.userId === currentUser.id && !n.isRead).length;
 
   const menuItems = [
-    { id: "home", label: "الرئيسية", icon: Home },
-    { id: "notifications", label: "الإشعارات والبريد", icon: Bell, badge: unreadNotifications },
-    { id: "profile", label: "الملف الشخصي", icon: User },
-    { id: "interests", label: "قائمة الاهتمامات", icon: Heart },
-    { id: "ignored", label: "قائمة التجاهل", icon: EyeOff },
-    { id: "who_interested", label: "من يهتم بي", icon: Users },
-    { id: "success_stories", label: "قصص النجاح", icon: Award },
-    { id: "premium", label: "الانضمام لباقة التميز", icon: Sparkles, highlight: true },
-    { id: "contact_us", label: "اتصل بنا", icon: Mail },
+    { id: "home", path: "/", label: "الرئيسية", icon: Home },
+    { id: "notifications", path: "/inbox", label: "الإشعارات والبريد", icon: Bell, badge: unreadNotifications },
+    { id: "profile", path: "/my-profile", label: "الملف الشخصي", icon: User },
+    { id: "interests", path: "/interests", label: "قائمة الاهتمامات", icon: Heart },
+    { id: "ignored", path: "/ignored", label: "قائمة التجاهل", icon: EyeOff },
+    { id: "who_interested", path: "/who-interested", label: "من يهتم بي", icon: Users },
+    { id: "success_stories", path: "/success-stories", label: "قصص النجاح", icon: Award },
+    { id: "premium", path: "/premium", label: "الانضمام لباقة التميز", icon: Sparkles, highlight: true },
+    { id: "contact_us", path: "/contact", label: "اتصل بنا", icon: Mail },
   ];
 
   const handleShare = () => {
@@ -50,8 +58,24 @@ export const Sidebar: React.FC<SidebarProps> = ({
         url: window.location.href,
       }).catch(console.error);
     } else {
-      alert("تم نسخ رابط التطبيق بنجاح! يمكنك مشاركته الآن مع الأصدقاء والعائلة.");
+      if (navigator.clipboard) {
+        navigator.clipboard.writeText(window.location.href);
+      }
+      addToast("تم نسخ رابط التطبيق بنجاح! يمكنك مشاركته الآن مع الأصدقاء والعائلة.", "success");
     }
+  };
+
+  const handleLogoutClick = () => {
+    showConfirm({
+      title: "تسجيل الخروج",
+      message: "هل أنت متأكد من رغبتك في تسجيل الخروج من حسابك؟",
+      confirmText: "تسجيل الخروج",
+      isDangerous: true,
+      onConfirm: async () => {
+        await logout();
+        onClose();
+      }
+    });
   };
 
   return (
@@ -81,6 +105,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
               <button 
                 onClick={onClose}
                 className="absolute top-4 left-4 p-1 rounded-full hover:bg-white/10 text-white transition duration-200"
+                aria-label="إغلاق القائمة"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -107,7 +132,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                       <span className="bg-emerald-500/20 text-emerald-300 text-[10px] px-1 py-0.5 rounded">موثق</span>
                     )}
                   </h3>
-                  <p className="text-xs text-emerald-200 font-mono">رقم العضوية: {currentUser.id}</p>
+                  <p className="text-xs text-emerald-200 font-mono">رقم العضوية: {currentUser.memberNumber}</p>
                 </div>
               </div>
             </div>
@@ -115,12 +140,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
             {/* Navigation links */}
             <div className="flex-1 overflow-y-auto p-4 space-y-1">
               
-              {/* If user is Admin (or email is the developer's / demo admin) */}
-              {(currentUser.email === "admin@example.com" || currentUser.email === "gharbalmatar@gmail.com") && (
+              {/* Admin role is decided by the server (user_roles table), never by the email */}
+              {isAdmin && (
                 <button
-                  onClick={() => handleItemClick("admin")}
+                  onClick={() => handleItemClick("/admin", "admin")}
                   className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold transition duration-200 ${
-                    activeScreen === "admin" 
+                    location.pathname === "/admin" || propActiveScreen === "admin"
                       ? "bg-rose-50 text-rose-700 border-r-4 border-rose-600" 
                       : "text-rose-600 hover:bg-rose-50/50"
                   }`}
@@ -131,12 +156,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
               )}
 
               {menuItems.map(item => {
-                const isSelected = activeScreen === item.id;
+                const isSelected = location.pathname === item.path || (item.path !== "/" && location.pathname.startsWith(item.path)) || propActiveScreen === item.id;
                 const Icon = item.icon;
                 return (
                   <button
                     key={item.id}
-                    onClick={() => handleItemClick(item.id)}
+                    onClick={() => handleItemClick(item.path, item.id)}
                     className={`w-full flex items-center justify-between px-4 py-3 rounded-xl text-sm font-semibold transition duration-200 ${
                       item.highlight 
                         ? "bg-amber-50 text-amber-800 hover:bg-amber-100/80 border border-amber-200" 
@@ -177,7 +202,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             {/* Logout Footer */}
             <div className="p-4 border-t border-slate-100">
               <button
-                onClick={logout}
+                onClick={handleLogoutClick}
                 className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold text-rose-600 hover:bg-rose-50 transition duration-200 text-right"
               >
                 <LogOut className="w-5 h-5 text-rose-500" />

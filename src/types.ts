@@ -17,10 +17,12 @@ export enum HijabType {
 }
 
 export interface UserProfile {
-  id: string; // Unique Member Number e.g., "MEMBER-4829"
+  id: string; // auth.users UUID (internal)
+  memberNumber: string; // Public member number e.g., "MEMBER-10042"
   name: string;
-  email: string;
-  mobile: string;
+  // Private fields: only present for the current user (and for admins)
+  email?: string;
+  mobile?: string;
   isMobileVerified: boolean;
   agreedToCharter: boolean;
   gender: Gender;
@@ -67,10 +69,13 @@ export interface UserProfile {
   // Hobbies & Interests
   hobbies: string[];
 
-  // Meta info
+  // Meta info & Privacy
   isPremium: boolean;
   isVerified: boolean; // Admin approved
   premiumExpiryDate?: string;
+  photoPrivacy?: "public" | "accepted_interest_only" | "hidden";
+  isPhotoLocked?: boolean;
+  incognitoMode?: boolean;
   joinDate: string;
   isOnline: boolean;
   lastSeen?: string;
@@ -89,7 +94,7 @@ export interface Message {
 export interface Notification {
   id: string;
   userId: string;
-  type: "interest" | "ignore" | "system" | "message" | "premium_request" | "verify_request";
+  type: "interest" | "ignore" | "system" | "message" | "premium_request" | "verify_request" | "view";
   senderId?: string;
   senderName?: string;
   content: string;
@@ -112,7 +117,7 @@ export interface Interaction {
   id: string;
   fromUserId: string;
   toUserId: string;
-  type: "interest" | "ignore" | "block" | "report";
+  type: "interest" | "ignore" | "block" | "report" | "accept_interest";
   reason?: string; // For reports
   timestamp: string;
 }
@@ -128,3 +133,27 @@ export interface PremiumSubscriptionRequest {
   status: "pending" | "approved" | "rejected";
   timestamp: string;
 }
+
+export interface SearchProfilesFilter {
+  gender?: Gender;
+  minAge?: number;
+  maxAge?: number;
+  residence?: string;
+  nationality?: string;
+  maritalStatus?: string;
+  religiousCommitment?: string;
+  education?: string;
+  searchQuery?: string;
+  sortBy?: "latest" | "age_asc" | "age_desc" | "activity";
+  page?: number;
+  pageSize?: number;
+}
+
+export interface SearchProfilesResponse {
+  results: UserProfile[];
+  total: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
+}
+

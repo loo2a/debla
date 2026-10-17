@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { useApp } from "../lib/store";
+import { useUIStore } from "../stores/uiStore";
 import { Gender } from "../types";
-import { SUPABASE_SQL_SETUP } from "../lib/supabase";
 import { 
   Shield, Users, Sparkles, Check, X, AlertTriangle, 
   Trash2, Award, ShieldCheck, Database, Copy, RefreshCw, CheckCircle2 
@@ -13,21 +13,15 @@ export const AdminPanel: React.FC = () => {
     adminApprovePremium, adminRejectPremium, adminVerifyUser, 
     adminDeleteUser, adminApproveStory, retryLoadData
   } = useApp();
+  const { addToast, showConfirm } = useUIStore();
 
-  const [activeTab, setActiveTab] = useState<"requests" | "users" | "reports" | "stories" | "supabase">("requests");
-  const [copied, setCopied] = useState(false);
+  const [activeTab, setActiveTab] = useState<"requests" | "users" | "reports" | "stories">("requests");
   const [isRetrying, setIsRetrying] = useState(false);
 
   const pendingRequests = premiumRequests.filter(r => r.status === "pending");
   const verifiedProfiles = profiles.filter(p => p.name !== "");
   const reports = interactions.filter(i => i.type === "report");
   const pendingStories = successStories.filter(s => !s.isApproved);
-
-  const handleCopySQL = () => {
-    navigator.clipboard.writeText(SUPABASE_SQL_SETUP);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
 
   const handleRetrySync = async () => {
     setIsRetrying(true);
@@ -58,15 +52,16 @@ export const AdminPanel: React.FC = () => {
               <div className="space-y-1">
                 <h4 className="font-bold text-amber-900 text-xs">حالة ربط قاعدة البيانات (Supabase)</h4>
                 <p className="text-[11px] text-amber-800 leading-relaxed">
-                  الجداول غير موجودة أو لم يتم إنشاؤها بعد في مشروع Supabase الخاص بك. تم تفعيل التخزين المحلي كبديل تلقائي لتشغيل التطبيق بسلاسة.
+                  {dbError}
                 </p>
               </div>
             </div>
             <button
-              onClick={() => setActiveTab("supabase")}
+              onClick={handleRetrySync}
+              disabled={isRetrying}
               className="bg-amber-600 hover:bg-amber-700 text-white font-bold text-[10px] px-3 py-1.5 rounded-xl transition flex-shrink-0 self-end md:self-auto"
             >
-              عرض كود التهيئة
+              إعادة المحاولة
             </button>
           </div>
         ) : (
@@ -141,17 +136,6 @@ export const AdminPanel: React.FC = () => {
             <span>القصص ({pendingStories.length})</span>
           </button>
 
-          <button
-            onClick={() => setActiveTab("supabase")}
-            className={`flex-1 min-w-[70px] py-2 rounded-xl text-[10px] md:text-xs font-bold transition flex items-center justify-center gap-1 ${
-              activeTab === "supabase" 
-                ? "bg-emerald-600 text-white" 
-                : "text-slate-500 hover:bg-slate-50"
-            }`}
-          >
-            <Database className="w-3.5 h-3.5" />
-            <span>إعداد Supabase</span>
-          </button>
         </div>
 
         {/* Tab content 1: Subscriptions requests */}
@@ -185,9 +169,13 @@ export const AdminPanel: React.FC = () => {
 
                     <div className="flex gap-2">
                       <button
-                        onClick={() => {
-                          adminApprovePremium(req.id);
-                          alert("تمت الموافقة وتفعيل اشتراك التميز للعضو وتحديث صلاحياته!");
+                        onClick={async () => {
+                          const res = await adminApprovePremium(req.id);
+                          if (res.ok) {
+                            addToast("تمت الموافقة وتفعيل اشتراك التميز للعضو وتحديث صلاحياته!", "success");
+                          } else {
+                            addToast(res.error || "فشل تفعيل الاشتراك", "error");
+                          }
                         }}
                         className="flex-1 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition flex items-center justify-center gap-1 shadow-md shadow-emerald-600/10"
                       >
@@ -196,9 +184,13 @@ export const AdminPanel: React.FC = () => {
                       </button>
 
                       <button
-                        onClick={() => {
-                          adminRejectPremium(req.id);
-                          alert("تم رفض طلب الاشتراك وإرسال إشعار فوري للتوضيح.");
+                        onClick={async () => {
+                          const res = await adminRejectPremium(req.id);
+                          if (res.ok) {
+                            addToast("تم رفض طلب الاشتراك وإرسال إشعار فوري للتوضيح.", "info");
+                          } else {
+                            addToast(res.error || "فشل رفض الطلب", "error");
+                          }
                         }}
                         className="w-1/3 py-2 border border-rose-100 hover:bg-rose-50 text-rose-600 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1"
                       >
@@ -234,16 +226,20 @@ export const AdminPanel: React.FC = () => {
                         {user.isVerified && <ShieldCheck className="w-4 h-4 text-emerald-600 flex-shrink-0" />}
                         {user.isPremium && <span className="text-[8px] bg-amber-500 text-slate-950 font-bold px-1.5 py-0.5 rounded-full">تميز</span>}
                       </h4>
-                      <p className="text-[9px] text-slate-400 font-mono">عضوية: {user.id} • سن: {user.age} • هاتف: {user.mobile}</p>
+                      <p className="text-[9px] text-slate-400 font-mono">عضوية: {user.memberNumber} • سن: {user.age} • هاتف: {user.mobile}</p>
                     </div>
                   </div>
 
                   <div className="flex gap-1.5 flex-shrink-0">
                     {!user.isVerified && (
                       <button
-                        onClick={() => {
-                          adminVerifyUser(user.id);
-                          alert(`تم توثيق حساب العضو ${user.name} وإعطائه الشارة بنجاح.`);
+                        onClick={async () => {
+                          const res = await adminVerifyUser(user.id);
+                          if (res.ok) {
+                            addToast(`تم توثيق حساب العضو ${user.name} بنجاح.`, "success");
+                          } else {
+                            addToast(res.error || "فشل توثيق الحساب", "error");
+                          }
                         }}
                         className="p-2 bg-emerald-50 text-emerald-600 hover:bg-emerald-100 rounded-xl transition"
                         title="توثيق الحساب"
@@ -254,11 +250,20 @@ export const AdminPanel: React.FC = () => {
 
                     <button
                       onClick={() => {
-                        const confirm = window.confirm(`هل أنت متأكد من رغبتك في حذف حساب العضو ${user.name} نهائياً؟ هذا الإجراء لا يمكن التراجع عنه.`);
-                        if (confirm) {
-                          adminDeleteUser(user.id);
-                          alert("تم حذف العضو من قاعدة البيانات بنجاح.");
-                        }
+                        showConfirm({
+                          title: "حذف حساب نهائياً",
+                          message: `هل أنت متأكد من رغبتك في حذف حساب العضو ${user.name} نهائياً؟ هذا الإجراء لا يمكن التراجع عنه.`,
+                          confirmText: "حذف الحساب",
+                          isDangerous: true,
+                          onConfirm: async () => {
+                            const res = await adminDeleteUser(user.id);
+                            if (res.ok) {
+                              addToast("تم حذف العضو من قاعدة البيانات بنجاح.", "success");
+                            } else {
+                              addToast(res.error || "فشل حذف العضو", "error");
+                            }
+                          }
+                        });
                       }}
                       className="p-2 bg-rose-50 text-rose-600 hover:bg-rose-100 rounded-xl transition"
                       title="حذف الحساب"
@@ -310,11 +315,20 @@ export const AdminPanel: React.FC = () => {
                       <div className="flex gap-2">
                         <button
                           onClick={() => {
-                            const confirm = window.confirm("هل ترغب في حظر وحذف هذا المشكو في حقه نهائياً بسبب إساءة استخدامه الفاضحة؟");
-                            if (confirm) {
-                              adminDeleteUser(report.toUserId);
-                              alert("تم حظر وحذف العضو المخالف بنجاح لحماية المجتمع.");
-                            }
+                            showConfirm({
+                              title: "حظر وحذف المشكو في حقه",
+                              message: "هل ترغب في حظر وحذف هذا المشكو في حقه نهائياً بسبب إساءة استخدامه الفاضحة؟",
+                              confirmText: "حظر وحذف",
+                              isDangerous: true,
+                              onConfirm: async () => {
+                                const res = await adminDeleteUser(report.toUserId);
+                                if (res.ok) {
+                                  addToast("تم حظر وحذف العضو المخالف بنجاح لحماية المجتمع.", "success");
+                                } else {
+                                  addToast(res.error || "فشل حذف العضو", "error");
+                                }
+                              }
+                            });
                           }}
                           className="flex-1 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 shadow-md shadow-rose-600/10"
                         >
@@ -353,9 +367,13 @@ export const AdminPanel: React.FC = () => {
                     </p>
 
                     <button
-                      onClick={() => {
-                        adminApproveStory(story.id);
-                        alert("تم اعتماد ونشر قصة النجاح بنجاح لتكون حافزاً وأملاً لجميع الأعضاء!");
+                      onClick={async () => {
+                        const res = await adminApproveStory(story.id);
+                        if (res.ok) {
+                          addToast("تم اعتماد ونشر قصة النجاح بنجاح لتكون حافزاً وأملاً لجميع الأعضاء!", "success");
+                        } else {
+                          addToast(res.error || "فشل اعتماد قصة النجاح", "error");
+                        }
                       }}
                       className="w-full py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition flex items-center justify-center gap-1 shadow-md shadow-emerald-600/10"
                     >
@@ -366,71 +384,6 @@ export const AdminPanel: React.FC = () => {
                 ))}
               </div>
             )}
-          </div>
-        )}
-
-        {/* Tab content 5: Supabase Setup Code */}
-        {activeTab === "supabase" && (
-          <div className="space-y-4">
-            <div className="bg-white rounded-2xl border border-slate-100 p-5 shadow-sm space-y-4 text-xs leading-relaxed">
-              <div className="flex items-center gap-2 border-b border-slate-50 pb-3 text-slate-800">
-                <Database className="w-5 h-5 text-emerald-600" />
-                <h3 className="font-bold text-sm">تهيئة جداول Supabase وقواعد الحماية RLS</h3>
-              </div>
-              
-              <p className="text-slate-600 font-medium">
-                لتفعيل قاعدة البيانات الحقيقية وتخزين بيانات الأعضاء والرسائل والإشعارات في مشروعك على Supabase، اتبع الخطوات التالية بجدية وسهولة:
-              </p>
-
-              <ol className="list-decimal list-inside space-y-2 pr-1 text-slate-600">
-                <li>افتح لوحة تحكم مشروعك في <a href="https://supabase.com" target="_blank" rel="noreferrer" className="text-emerald-600 hover:underline font-bold">Supabase Console</a>.</li>
-                <li>من القائمة الجانبية اليسرى، اختر قسم <span className="font-bold text-slate-800 bg-slate-100 px-1.5 py-0.5 rounded">SQL Editor</span>.</li>
-                <li>اضغط على زر <span className="font-bold text-slate-800 bg-slate-100 px-1.5 py-0.5 rounded">+ New Query</span> لفتح محرر جديد.</li>
-                <li>اضغط على زر <b>"نسخ كود SQL البرمجي"</b> أدناه، ثم الصقه داخل المحرر في Supabase.</li>
-                <li>اضغط على زر <span className="font-bold bg-emerald-600 text-white px-2 py-0.5 rounded text-[10px]">Run</span> باللون الأخضر لتنفيذ الأوامر فوراً.</li>
-                <li>بعد تنفيذ الكود، اضغط على <b>"إعادة المحاولة ومزامنة البيانات"</b> بالأسفل للربط النهائي!</li>
-              </ol>
-
-              <div className="space-y-2 pt-2">
-                <div className="flex justify-between items-center bg-slate-800 text-slate-200 px-4 py-2 rounded-t-xl font-mono text-[10px]">
-                  <span>MODAWWAH_SETUP.sql</span>
-                  <button
-                    onClick={handleCopySQL}
-                    className="flex items-center gap-1.5 bg-slate-700 hover:bg-slate-600 text-white px-3 py-1.5 rounded-lg transition font-sans text-xs"
-                  >
-                    {copied ? (
-                      <>
-                        <Check className="w-3.5 h-3.5 text-emerald-400" />
-                        <span className="text-emerald-400 font-bold">تم النسخ!</span>
-                      </>
-                    ) : (
-                      <>
-                        <Copy className="w-3.5 h-3.5" />
-                        <span>نسخ كود SQL البرمجي</span>
-                      </>
-                    )}
-                  </button>
-                </div>
-                
-                <div className="relative">
-                  <pre className="bg-slate-900 text-slate-300 p-4 rounded-b-xl overflow-x-auto font-mono text-[9px] h-60 border border-slate-800 leading-normal select-all">
-                    {SUPABASE_SQL_SETUP}
-                  </pre>
-                </div>
-              </div>
-
-              <div className="pt-2">
-                <button
-                  onClick={handleRetrySync}
-                  disabled={isRetrying}
-                  className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl transition flex items-center justify-center gap-2 shadow-lg shadow-emerald-600/10"
-                >
-                  <RefreshCw className={`w-4 h-4 ${isRetrying ? "animate-spin" : ""}`} />
-                  <span>إعادة المحاولة ومزامنة البيانات الحية</span>
-                </button>
-              </div>
-
-            </div>
           </div>
         )}
 
