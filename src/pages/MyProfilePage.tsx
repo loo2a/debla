@@ -1,16 +1,16 @@
 import React, { useState } from "react";
 import { useApp } from "../lib/store";
 import { useUIStore } from "../stores/uiStore";
-import { Sparkles, EyeOff, Edit, ShieldCheck } from "lucide-react";
+import { Sparkles, EyeOff, Edit, ShieldCheck, Trash2, AlertTriangle } from "lucide-react";
 import { Button } from "../components/ui/Button";
 import { Card } from "../components/ui/Card";
 
 export const MyProfilePage: React.FC = () => {
   const { 
     currentUser, updateProfile, uploadCustomImage, 
-    updatePhotoPrivacy, toggleIncognitoMode 
+    updatePhotoPrivacy, toggleIncognitoMode, deleteMyAccount 
   } = useApp();
-  const { addToast } = useUIStore();
+  const { addToast, showConfirm } = useUIStore();
 
   const [isEditing, setIsEditing] = useState(false);
   const [editAboutMe, setEditAboutMe] = useState(currentUser?.aboutMe || "");
@@ -77,6 +77,24 @@ export const MyProfilePage: React.FC = () => {
     } else {
       addToast(res.error || "فشل تغيير وضع التصفح", "error");
     }
+  };
+
+  const handleDeleteAccount = () => {
+    showConfirm({
+      title: "حذف الحساب والبيانات نهائياً",
+      message: "تحذير أخير: هل أنت متأكد تماماً من رغبتك في حذف حسابك؟ سيتم مسح ملفك الشخصي بالكامل، وصورك المرفوعة، وكافة رسائلك وسجلاتك نهائياً من خوادم المنصة دون أي إمكانية للاسترجاع.",
+      confirmText: "نعم، احذف حسابي وبياناتي نهائياً",
+      cancelText: "إلغاء وتراجع",
+      isDangerous: true,
+      onConfirm: async () => {
+        const res = await deleteMyAccount();
+        if (res.ok) {
+          addToast("تم حذف حسابك وجميع بياناتك بنجاح.", "info");
+        } else {
+          addToast(res.error || "تعذر إتمام عملية الحذف، يرجى المحاولة لاحقاً.", "error");
+        }
+      },
+    });
   };
 
   return (
@@ -274,6 +292,30 @@ export const MyProfilePage: React.FC = () => {
           </Card>
         </form>
       )}
+
+      {/* Danger Zone: Account Deletion (Google Play Compliance) */}
+      <Card className="border border-rose-200/80 bg-rose-50/30 p-4 space-y-3">
+        <div className="flex items-start gap-3">
+          <div className="p-2 rounded-xl bg-rose-100 text-rose-700 flex-shrink-0">
+            <Trash2 className="w-5 h-5" />
+          </div>
+          <div className="space-y-0.5 flex-1">
+            <h4 className="text-xs font-bold text-rose-900">إدارة الحساب وحذف البيانات</h4>
+            <p className="text-[11px] text-rose-700/90 leading-relaxed">
+              وفقاً لسياسات متجر Google Play وحماية الخصوصية، يمكنك مسح حسابك وكافة محادثاتك وصورك نهائياً من النظام في أي وقت.
+            </p>
+          </div>
+        </div>
+        <Button
+          type="button"
+          variant="danger"
+          size="sm"
+          onClick={handleDeleteAccount}
+          className="w-full text-xs py-2.5"
+        >
+          حذف الحساب ومسح كافة البيانات نهائياً
+        </Button>
+      </Card>
     </div>
   );
 };

@@ -74,6 +74,17 @@ export const StepCharter: React.FC<StepCharterProps> = ({ onSuccess }) => {
       >
         الموافقة ومتابعة التسجيل
       </Button>
+
+      <div className="text-center text-[11px] text-slate-500 space-x-2 space-x-reverse">
+        <span>بالموافقة، أنت تقر أيضاً باطلاعك على</span>
+        <a href="/terms" target="_blank" rel="noopener noreferrer" className="text-emerald-700 underline font-semibold hover:text-emerald-800">
+          شروط الاستخدام
+        </a>
+        <span>و</span>
+        <a href="/privacy" target="_blank" rel="noopener noreferrer" className="text-emerald-700 underline font-semibold hover:text-emerald-800">
+          سياسة الخصوصية
+        </a>
+      </div>
     </div>
   );
 };

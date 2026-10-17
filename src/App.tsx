@@ -1,5 +1,5 @@
 import React, { Suspense, lazy } from "react";
-import { Routes, Route, Navigate } from "react-router-dom";
+import { Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { AppProvider, useApp } from "./lib/store";
 import { supabaseConfigError } from "./lib/supabase";
 import { useUIStore } from "./stores/uiStore";
@@ -25,6 +25,9 @@ const InterestsPage = lazy(() => import("./pages/InterestsPage").then(m => ({ de
 const IgnoredPage = lazy(() => import("./pages/IgnoredPage").then(m => ({ default: m.IgnoredPage })));
 const WhoInterestedPage = lazy(() => import("./pages/WhoInterestedPage").then(m => ({ default: m.WhoInterestedPage })));
 const ContactPage = lazy(() => import("./pages/ContactPage").then(m => ({ default: m.ContactPage })));
+const PrivacyPolicyPage = lazy(() => import("./pages/PrivacyPolicyPage").then(m => ({ default: m.PrivacyPolicyPage })));
+const TermsPage = lazy(() => import("./pages/TermsPage").then(m => ({ default: m.TermsPage })));
+const DeleteAccountPage = lazy(() => import("./pages/DeleteAccountPage").then(m => ({ default: m.DeleteAccountPage })));
 
 const PageLoadingFallback: React.FC = () => (
   <div className="p-4 space-y-4 max-w-md mx-auto pt-8" dir="rtl">
@@ -77,6 +80,39 @@ const AppContent: React.FC = () => {
     );
   }
 
+  const location = useLocation();
+
+  // Public compliance routes accessible directly without login (Google Play Review Requirement)
+  if (location.pathname === "/privacy" || location.pathname === "/privacy-policy") {
+    return (
+      <ErrorBoundary>
+        <Suspense fallback={<PageLoadingFallback />}>
+          <PrivacyPolicyPage />
+        </Suspense>
+      </ErrorBoundary>
+    );
+  }
+
+  if (location.pathname === "/terms" || location.pathname === "/charter") {
+    return (
+      <ErrorBoundary>
+        <Suspense fallback={<PageLoadingFallback />}>
+          <TermsPage />
+        </Suspense>
+      </ErrorBoundary>
+    );
+  }
+
+  if (location.pathname === "/delete-account") {
+    return (
+      <ErrorBoundary>
+        <Suspense fallback={<PageLoadingFallback />}>
+          <DeleteAccountPage />
+        </Suspense>
+      </ErrorBoundary>
+    );
+  }
+
   // Not logged in, or onboarding (charter / profile) not finished yet
   if (!currentUser || !currentUser.agreedToCharter || !currentUser.name) {
     return <AuthFlow />;
@@ -110,6 +146,11 @@ const AppContent: React.FC = () => {
               <Route path="/ignored" element={<IgnoredPage />} />
               <Route path="/who-interested" element={<WhoInterestedPage />} />
               <Route path="/contact" element={<ContactPage />} />
+              <Route path="/privacy" element={<PrivacyPolicyPage />} />
+              <Route path="/privacy-policy" element={<PrivacyPolicyPage />} />
+              <Route path="/terms" element={<TermsPage />} />
+              <Route path="/charter" element={<TermsPage />} />
+              <Route path="/delete-account" element={<DeleteAccountPage />} />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
           </Suspense>

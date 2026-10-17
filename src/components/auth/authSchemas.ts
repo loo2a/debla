@@ -41,9 +41,19 @@ export const profileFormSchema = z.object({
   marriageTimeframe: z.string().min(1, "يرجى تحديد الفترة المتوقعة للزواج"),
   shariaVisionStance: z.string().min(1, "يرجى تحديد الموقف من الرؤية الشرعية"),
 
-  // Descriptions (Strict 140 char minimum for seriousness)
-  aboutMe: z.string().trim().min(140, "يجب كتابة 140 حرفاً على الأقل في حقل 'تحدث عن نفسك' لتأكيد الجدية"),
-  partnerSpecs: z.string().trim().min(140, "يجب كتابة 140 حرفاً على الأقل في حقل 'مواصفات الشريك' لتأكيد الجدية"),
+  // Descriptions (Strict 140 char minimum for seriousness + Contact Leakage Shield)
+  aboutMe: z.string().trim()
+    .min(140, "يجب كتابة 140 حرفاً على الأقل في حقل 'تحدث عن نفسك' لتأكيد الجدية")
+    .refine(
+      (val) => !/(?:https?:\/\/|www\.|\.com|\.net|[0-9]{8,}|[\u0660-\u0669]{8,})/i.test(val),
+      "يمنع إدراج أرقام الهواتف أو الروابط في النبذة العامة لحماية خصوصيتك والالتزام بضوابط المنصة"
+    ),
+  partnerSpecs: z.string().trim()
+    .min(140, "يجب كتابة 140 حرفاً على الأقل في حقل 'مواصفات الشريك' لتأكيد الجدية")
+    .refine(
+      (val) => !/(?:https?:\/\/|www\.|\.com|\.net|[0-9]{8,}|[\u0660-\u0669]{8,})/i.test(val),
+      "يمنع إدراج أرقام الهواتف أو الروابط في مواصفات الشريك لحماية الخصوصية"
+    ),
 });
 
 export type ProfileFormData = z.infer<typeof profileFormSchema>;

@@ -39,6 +39,7 @@ interface AppContextType {
   uploadCustomImage: (fileOrBase64: File | Blob | string) => Promise<ActionResult>;
   updatePhotoPrivacy: (privacy: "public" | "accepted_interest_only" | "hidden") => Promise<ActionResult>;
   toggleIncognitoMode: () => Promise<ActionResult>;
+  deleteMyAccount: () => Promise<ActionResult>;
   logout: () => Promise<void>;
   clearActionError: () => void;
 
@@ -413,6 +414,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
     await supabase.auth.signOut();
     resetState();
+  };
+
+  const deleteMyAccount = async (): Promise<ActionResult> => {
+    if (!currentUser) return { ok: false, error: "يجب تسجيل الدخول أولاً." };
+    const { error } = await supabase.rpc("delete_my_account_rpc");
+    if (error) return fail(error);
+    await logout();
+    return { ok: true };
   };
 
   const submitCharterAgreement = async (): Promise<ActionResult> => {
@@ -882,6 +891,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       uploadCustomImage,
       updatePhotoPrivacy,
       toggleIncognitoMode,
+      deleteMyAccount,
       logout,
       clearActionError,
 
