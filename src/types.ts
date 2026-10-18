@@ -71,7 +71,10 @@ export interface UserProfile {
 
   // Meta info & Privacy
   isPremium: boolean;
-  isVerified: boolean; // Admin approved
+  isVerified: boolean; // General verified badge (legacy fallback)
+  isPhotoVerified?: boolean; // المستوى 2: مطابقة الصورة الشخصية
+  isIdVerified?: boolean; // المستوى 3: التحقق الآمن من الهوية الرسمية
+  isDocsVerified?: boolean; // المستوى 4: مراجعة مستندات أو بيانات إضافية
   premiumExpiryDate?: string;
   photoPrivacy?: "public" | "accepted_interest_only" | "hidden";
   isPhotoLocked?: boolean;
@@ -80,6 +83,19 @@ export interface UserProfile {
   isOnline: boolean;
   lastSeen?: string;
   viewsCount: number;
+}
+
+export type VerificationTierType = "phone" | "photo" | "id" | "docs";
+
+export interface VerificationTierConfig {
+  id: VerificationTierType;
+  levelNumber: number;
+  title: string;
+  badgeLabel: string;
+  iconName: string;
+  colorClass: string;
+  whatVerified: string;
+  importantDisclaimer: string;
 }
 
 export interface Message {

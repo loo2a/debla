@@ -16,6 +16,7 @@ import {
   MahrOpinions, MarriageTimeframes, Avatars 
 } from "../constants";
 import { MaritalStatus, Gender } from "../types";
+import { MyTrustVerificationManager } from "../components/MyTrustVerificationManager";
 
 export const MyProfilePage: React.FC = () => {
   const { 
@@ -261,6 +262,9 @@ export const MyProfilePage: React.FC = () => {
           </div>
         </div>
       </Card>
+
+      {/* Multi-tier Trust & Verification Manager */}
+      <MyTrustVerificationManager />
 
       {/* Main Content: View Mode vs Edit Mode */}
       {!isEditing ? (

@@ -6,13 +6,16 @@ import { Gender } from "../types";
 import { getAvatarUrl } from "../lib/avatarUtils";
 import { 
   Shield, Users, Sparkles, Check, X, AlertTriangle, 
-  Trash2, Award, ShieldCheck, Database, Copy, RefreshCw, CheckCircle2 
+  Trash2, Award, ShieldCheck, Database, Copy, RefreshCw, CheckCircle2,
+  Smartphone, Camera, FileCheck2 
 } from "lucide-react";
+import { getUserVerificationTiers } from "../lib/verificationTiers";
+import { VerificationTierType } from "../types";
 
 export const AdminPanel: React.FC = () => {
   const { 
     isAdmin, profiles, premiumRequests, interactions, successStories, dbError, isSupabaseLoading,
-    adminApprovePremium, adminRejectPremium, adminVerifyUser, 
+    adminApprovePremium, adminRejectPremium, adminVerifyUser, adminUpdateTierVerification,
     adminDeleteUser, adminApproveStory, retryLoadData
   } = useApp();
   const { addToast, showConfirm } = useUIStore();
@@ -237,23 +240,34 @@ export const AdminPanel: React.FC = () => {
                     </div>
                   </div>
 
-                  <div className="flex gap-1.5 flex-shrink-0">
-                    {!user.isVerified && (
-                      <button
-                        onClick={async () => {
-                          const res = await adminVerifyUser(user.id);
-                          if (res.ok) {
-                            addToast(`تم توثيق حساب العضو ${user.name} بنجاح.`, "success");
-                          } else {
-                            addToast(res.error || "فشل توثيق الحساب", "error");
-                          }
-                        }}
-                        className="p-2 bg-emerald-50 text-emerald-600 hover:bg-emerald-100 rounded-xl transition"
-                        title="توثيق الحساب"
-                      >
-                        <Check className="w-4 h-4" />
-                      </button>
-                    )}
+                  <div className="flex flex-col sm:flex-row items-end sm:items-center gap-2 flex-shrink-0">
+                    {/* Multi-tier Verification toggles */}
+                    <div className="flex items-center gap-1 bg-slate-50 p-1 rounded-xl border border-slate-200">
+                      {getUserVerificationTiers(user).map((t) => (
+                        <button
+                          key={t.tier.id}
+                          type="button"
+                          onClick={async () => {
+                            const res = await adminUpdateTierVerification(user.id, t.tier.id, !t.isVerified);
+                            if (res.ok) {
+                              addToast(`تم تحديث ${t.tier.title} لـ ${user.name}`, "success");
+                            }
+                          }}
+                          className={`p-1.5 rounded-lg text-xs font-bold transition flex items-center gap-0.5 cursor-pointer ${
+                            t.isVerified
+                              ? "bg-emerald-600 text-white shadow-2xs"
+                              : "bg-white text-slate-400 hover:text-slate-600 border border-slate-200"
+                          }`}
+                          title={`${t.tier.title}: ${t.isVerified ? "مفعل (انقر لإلغاء التوثيق)" : "غير مفعل (انقر للتوثيق)"}`}
+                        >
+                          {t.tier.id === "phone" && <Smartphone className="w-3.5 h-3.5" />}
+                          {t.tier.id === "photo" && <Camera className="w-3.5 h-3.5" />}
+                          {t.tier.id === "id" && <ShieldCheck className="w-3.5 h-3.5" />}
+                          {t.tier.id === "docs" && <FileCheck2 className="w-3.5 h-3.5" />}
+                          <span className="text-[9px] hidden sm:inline">{t.tier.badgeLabel}</span>
+                        </button>
+                      ))}
+                    </div>
 
                     <button
                       onClick={() => {

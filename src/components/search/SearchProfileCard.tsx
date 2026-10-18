@@ -1,7 +1,8 @@
 import React from "react";
 import { UserProfile } from "../../types";
-import { User, MapPin, ShieldCheck, Sparkles } from "lucide-react";
+import { User, MapPin, Sparkles } from "lucide-react";
 import { getAvatarUrl } from "../../lib/avatarUtils";
+import { TrustVerificationBadges } from "../TrustVerificationBadges";
 
 interface SearchProfileCardProps {
   profile: UserProfile;
@@ -31,13 +32,11 @@ export const SearchProfileCard: React.FC<SearchProfileCardProps> = ({ profile, o
 
       <div className="flex-1 space-y-2 min-w-0">
         <div className="space-y-0.5">
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-1.5 flex-wrap">
             <h4 className="font-extrabold text-slate-800 text-sm sm:text-base leading-tight truncate">
               {profile.name}
             </h4>
-            {profile.isVerified && (
-              <ShieldCheck className="w-4 h-4 text-emerald-600 fill-emerald-100 flex-shrink-0" />
-            )}
+            <TrustVerificationBadges user={profile} variant="compact" />
           </div>
           <p className="text-[10px] text-slate-400 font-mono">عضوية: {profile.memberNumber}</p>
         </div>

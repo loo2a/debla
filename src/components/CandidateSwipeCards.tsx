@@ -11,6 +11,7 @@ import {
   Briefcase, GraduationCap, Eye, ArrowRight, 
   RotateCcw, CheckCircle2, Lock, Flame
 } from "lucide-react";
+import { TrustVerificationBadges } from "./TrustVerificationBadges";
 
 interface CandidateSwipeCardsProps {
   onOpenProfile?: (userId: string) => void;
@@ -236,12 +237,7 @@ export const CandidateSwipeCards: React.FC<CandidateSwipeCardsProps> = ({ onOpen
                     <span className="bg-emerald-500/30 text-white text-[10px] font-mono px-2 py-0.5 rounded-full border border-white/20">
                       {currentCandidate.profile.memberNumber}
                     </span>
-                    {currentCandidate.profile.isVerified && (
-                      <span className="bg-emerald-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-md flex items-center gap-0.5 shadow-sm">
-                        <CheckCircle2 className="w-3 h-3" />
-                        موثق
-                      </span>
-                    )}
+                    <TrustVerificationBadges user={currentCandidate.profile} variant="compact" />
                   </div>
 
                   {/* Compatibility Badge */}

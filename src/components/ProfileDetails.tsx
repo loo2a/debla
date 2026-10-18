@@ -9,6 +9,7 @@ import {
   Bookmark, ArrowRight, ShieldCheck, Sparkles, MapPin, 
   User, CheckCircle, HelpCircle, Lock, Check, Share2 
 } from "lucide-react";
+import { TrustVerificationBadges } from "./TrustVerificationBadges";
 
 interface ProfileDetailsProps {
   userId?: string;
@@ -248,6 +249,11 @@ export const ProfileDetails: React.FC<ProfileDetailsProps> = ({
                 {profile.name}
               </h3>
               <p className="text-xs text-slate-400 font-mono">عضوية رقم فريد: {profile.memberNumber} • انضم في: {profile.joinDate}</p>
+              
+              {/* Multi-tier Verification Badges */}
+              <div className="flex justify-center pt-1">
+                <TrustVerificationBadges user={profile} variant="chips" />
+              </div>
             </div>
 
             <div className="flex gap-2">
@@ -260,6 +266,9 @@ export const ProfileDetails: React.FC<ProfileDetailsProps> = ({
             </div>
           </div>
         </div>
+
+        {/* Detailed Multi-tier Trust & Verification Section */}
+        <TrustVerificationBadges user={profile} variant="detailed" />
 
         {/* Mutual interest incoming alert banner */}
         {hasReceivedInterest && !hasAcceptedInterest && (
