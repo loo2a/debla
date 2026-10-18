@@ -267,6 +267,41 @@ export const MyProfilePage: React.FC = () => {
               <option value="hidden">مخفية مؤقتاً</option>
             </select>
           </div>
+
+          {/* حالة مراجعة الصورة والوقار */}
+          {currentUser.profileImage && currentUser.photoModerationStatus === "pending_approval" && (
+            <div className="p-2.5 bg-amber-50 border border-amber-200 rounded-xl text-center space-y-1">
+              <p className="text-xs font-bold text-amber-800 flex items-center justify-center gap-1.5">
+                <Sparkles className="w-3.5 h-3.5 text-amber-600 animate-spin" />
+                الصورة قيد المراجعة والاعتماد من الإدارة
+              </p>
+              <p className="text-[11px] text-amber-700 leading-relaxed">
+                حفاظاً على الوقار والخصوصية، يظهر الأفاتار الكرتوني لبقية الأعضاء حتى مراجعة الصورة والموافقة عليها.
+              </p>
+            </div>
+          )}
+
+          {currentUser.photoModerationStatus === "rejected" && (
+            <div className="p-2.5 bg-rose-50 border border-rose-200 rounded-xl text-center space-y-1">
+              <p className="text-xs font-bold text-rose-800">
+                ⚠️ تم رفض الصورة المرفوعة
+              </p>
+              <p className="text-[11px] text-rose-700 leading-relaxed">
+                {currentUser.photoRejectedReason || "الصورة لا تطابق ضوابط الوقار المعتمدة. يمكنك رفع صورة أخرى مناسبة."}
+              </p>
+            </div>
+          )}
+
+          {currentUser.photoModerationStatus === "frozen_by_reports" && (
+            <div className="p-2.5 bg-rose-50 border border-rose-200 rounded-xl text-center space-y-1">
+              <p className="text-xs font-bold text-rose-800">
+                🔒 تم إيقاف عرض الصورة مؤقتاً
+              </p>
+              <p className="text-[11px] text-rose-700 leading-relaxed">
+                تم تجميد الصورة الشخصية واسترجاع الأفاتار الكرتوني تلقائياً بناءً على بلاغات مستخدمين وجارٍ فحصها من المشرف.
+              </p>
+            </div>
+          )}
         </div>
       </Card>
 

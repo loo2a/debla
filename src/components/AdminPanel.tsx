@@ -6,20 +6,21 @@ import { Gender } from "../types";
 import { 
   Shield, Users, Sparkles, Check, X, AlertTriangle, 
   Trash2, Award, ShieldCheck, RefreshCw, CheckCircle2,
-  Lock, Tag, Bell, BarChart3, ChevronLeft
+  Lock, Tag, Bell, BarChart3, ChevronLeft, Camera
 } from "lucide-react";
 import { AdminUsersManager } from "./admin/AdminUsersManager";
 import { AdminCouponsManager } from "./admin/AdminCouponsManager";
 import { AdminBroadcastManager } from "./admin/AdminBroadcastManager";
 import { AdminAnalyticsDashboard } from "./admin/AdminAnalyticsDashboard";
 
-type AdminTab = "analytics" | "users" | "requests" | "coupons" | "broadcast" | "edit_requests" | "reports" | "stories";
+type AdminTab = "analytics" | "users" | "photos" | "requests" | "coupons" | "broadcast" | "edit_requests" | "reports" | "stories";
 
 export const AdminPanel: React.FC = () => {
   const { 
     isAdmin, profiles, premiumRequests, interactions, successStories, dbError, isSupabaseLoading,
     adminApprovePremium, adminRejectPremium, adminApproveStory, retryLoadData,
-    profileEditRequests, adminReviewProfileEditRequest
+    profileEditRequests, adminReviewProfileEditRequest,
+    adminApprovePhoto, adminRejectPhoto
   } = useApp();
   const { addToast, showConfirm } = useUIStore();
 
@@ -37,6 +38,7 @@ export const AdminPanel: React.FC = () => {
   const reports = interactions.filter(i => i.type === "report");
   const pendingStories = successStories.filter(s => !s.isApproved);
   const pendingEditRequests = profileEditRequests.filter(r => r.status === "pending");
+  const pendingPhotos = profiles.filter(p => p.photoModerationStatus === "pending_approval" || p.photoModerationStatus === "frozen_by_reports");
 
   const handleRetrySync = async () => {
     setIsRetrying(true);
@@ -51,6 +53,7 @@ export const AdminPanel: React.FC = () => {
 
   const navItems = [
     { id: "analytics", label: "نظرة عامة وإحصائيات", icon: BarChart3, badge: null },
+    { id: "photos", label: "مراجعة واعتماد الصور", icon: Camera, badge: pendingPhotos.length, badgeColor: "bg-rose-500" },
     { id: "users", label: "التحكم في الحسابات", icon: Users, badge: profiles.filter(p => p.name).length },
     { id: "requests", label: "إدارة الاشتراكات", icon: Sparkles, badge: pendingRequests.length, badgeColor: "bg-amber-500" },
     { id: "coupons", label: "الخصومات والكوبونات", icon: Tag, badge: null },
@@ -156,6 +159,107 @@ export const AdminPanel: React.FC = () => {
         {/* ======================================================== */}
         {activeTab === "users" && (
           <AdminUsersManager onSelectUserForBroadcast={handleSelectUserForBroadcast} />
+        )}
+
+        {/* ======================================================== */}
+        {/* Tab: Photo Moderation & Dignity Defense (مراجعة الصور) */}
+        {/* ======================================================== */}
+        {activeTab === "photos" && (
+          <div className="space-y-4">
+            <div className="bg-white rounded-2xl p-4 border border-slate-100 space-y-1">
+              <h3 className="font-extrabold text-slate-800 text-sm flex items-center gap-2">
+                <Camera className="w-4 h-4 text-emerald-600" />
+                <span>مركز مراجعة واعتماد الصور الشخصية (خط الدفاع الثاني)</span>
+              </h3>
+              <p className="text-xs text-slate-500 leading-relaxed">
+                أي صورة يرفعها مستخدم مميز تبقى معلقة ومخفية عن العامة ويظهر الأفاتار الكرتوني بدلاً منها حتى تقوم باعتمادها أو رفضها.
+              </p>
+            </div>
+
+            {pendingPhotos.length === 0 ? (
+              <div className="bg-white rounded-2xl p-10 border border-slate-100 text-center space-y-2">
+                <CheckCircle2 className="w-10 h-10 text-emerald-500 mx-auto" />
+                <h4 className="font-bold text-slate-800 text-sm">كل شيء آمن ومضبوط!</h4>
+                <p className="text-xs text-slate-400">لا توجد أي صور شخصية معلقة بانتظار المراجعة حالياً.</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {pendingPhotos.map((user) => {
+                  const isFrozen = user.photoModerationStatus === "frozen_by_reports";
+                  return (
+                    <div key={user.id} className="bg-white rounded-2xl border border-slate-100 p-4 shadow-sm space-y-3">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <span className="font-bold text-slate-800 text-xs">{user.name}</span>
+                          <span className="text-[10px] text-slate-400 font-mono">({user.memberNumber})</span>
+                        </div>
+                        {isFrozen ? (
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-50 text-rose-600 border border-rose-200">
+                            مجمدة ببلاغات ({user.photoReportsCount || 2})
+                          </span>
+                        ) : (
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200">
+                            بانتظار الاعتماد
+                          </span>
+                        )}
+                      </div>
+
+                      {/* عرض الصورة الشخصية المطلوب مراجعتها */}
+                      <div className="relative aspect-square rounded-xl overflow-hidden bg-slate-100 border border-slate-200 flex items-center justify-center">
+                        {user.profileImage ? (
+                          <img
+                            src={user.profileImage}
+                            alt={user.name}
+                            className="w-full h-full object-cover"
+                            referrerPolicy="no-referrer"
+                          />
+                        ) : (
+                          <span className="text-xs text-slate-400">لا يوجد رابط صورة</span>
+                        )}
+                      </div>
+
+                      <div className="space-y-2 pt-1">
+                        <input
+                          type="text"
+                          placeholder="سبب الرفض إن وجدت مخالفة (اختياري)..."
+                          value={rejectNotes[user.id] || ""}
+                          onChange={(e) => setRejectNotes(prev => ({ ...prev, [user.id]: e.target.value }))}
+                          className="w-full px-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-1 focus:ring-rose-500"
+                        />
+
+                        <div className="flex gap-2">
+                          <button
+                            onClick={async () => {
+                              const res = await adminApprovePhoto(user.id);
+                              if (res.ok) addToast("تم اعتماد الصورة ونشرها بنجاح!", "success");
+                              else addToast(res.error || "تعذر الاعتماد", "error");
+                            }}
+                            className="flex-1 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition flex items-center justify-center gap-1 cursor-pointer"
+                          >
+                            <Check className="w-3.5 h-3.5" />
+                            <span>اعتماد الصورة</span>
+                          </button>
+
+                          <button
+                            onClick={async () => {
+                              const reason = rejectNotes[user.id] || "الصورة غير مطابقة لمعايير الوقار والوضوح.";
+                              const res = await adminRejectPhoto(user.id, reason);
+                              if (res.ok) addToast("تم رفض الصورة وحذفها بنجاح", "info");
+                              else addToast(res.error || "تعذر الرفض", "error");
+                            }}
+                            className="py-2 px-3 bg-rose-50 hover:bg-rose-100 text-rose-700 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1 cursor-pointer"
+                          >
+                            <X className="w-3.5 h-3.5" />
+                            <span>رفض وحذف</span>
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
         )}
 
         {/* ======================================================== */}

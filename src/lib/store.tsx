@@ -10,6 +10,7 @@ import {
 import { supabase } from "./supabase";
 import { compressImage } from "./imageUtils";
 import { INITIAL_ACADEMY_ARTICLES } from "./defaultAcademyArticles";
+import { preCheckUploadedImage } from "./photoModeration";
 
 export interface ActionResult {
   ok: boolean;
@@ -124,6 +125,10 @@ interface AppContextType {
   fetchAcademyArticles: () => Promise<void>;
   markArticleRead: (articleId: string) => Promise<{ pointsAwarded: number; alreadyRead: boolean }>;
   rateArticle: (articleId: string, rating: number) => Promise<void>;
+
+  // Photo Moderation & Defense (إدارة واعتماد الصور الشخصية)
+  adminApprovePhoto: (userId: string) => Promise<ActionResult>;
+  adminRejectPhoto: (userId: string, reason: string) => Promise<ActionResult>;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -246,6 +251,10 @@ const toProfile = (row: any, priv?: any, sensitive?: any, pref?: any): UserProfi
   viewsCount: row.viewsCount ?? 0,
   scheduledDeletionAt: row.scheduled_deletion_at || row.scheduledDeletionAt || null,
   academyPoints: row.academy_points ?? row.academyPoints ?? 0,
+  photoModerationStatus: row.photo_moderation_status || row.photoModerationStatus || (row.profile_image_url ? "approved" : "unsubmitted"),
+  photoRejectedReason: row.photo_rejected_reason || row.photoRejectedReason || undefined,
+  photoReportsCount: row.photo_reports_count ?? row.photoReportsCount ?? 0,
+  photoSubmittedAt: row.photo_submitted_at || row.photoSubmittedAt || undefined,
 });
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -865,7 +874,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const updateAvatar = (avatarId: string) => saveProfile({ avatar: avatarId });
 
   // ------------------------------------------------------------------
-  // Image Upload with Client-Side Compression & Storage Bucket
+  // Image Upload with 3-Layer Moderation Defense (خطوط الدفاع الثلاثة)
   // ------------------------------------------------------------------
   const uploadCustomImage = async (fileOrBase64: File | Blob | string): Promise<ActionResult> => {
     if (!currentUser?.isPremium) {
@@ -873,7 +882,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
 
     try {
-      // ضغط الصورة في المتصفح أولاً
+      // 🛡️ خط الدفاع الأول: الفحص الآلي المسبق لمنع العري، الصور الفارغة أو المشوهة
+      const preCheck = await preCheckUploadedImage(fileOrBase64);
+      if (!preCheck.isSafe) {
+        return fail(new Error(preCheck.reason || "الصورة المرفوعة تخالف معايير الوقار والخصوصية المعتمدة."));
+      }
+
+      // ضغط الصورة في المتصفح
       const { blob, dataUrl } = await compressImage(fileOrBase64, 800, 800, 0.82);
 
       // محاولة الرفع إلى Supabase Storage Bucket 'profile-photos'
@@ -885,20 +900,29 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           upsert: true,
         });
 
+      let finalUrl = dataUrl;
       if (!uploadError) {
-        // توليد Signed URL طويل المدى للمستخدم
         const { data: signedData } = await supabase.storage
           .from("profile-photos")
           .createSignedUrl(filePath, 60 * 60 * 24 * 365); // 1 year
-
-        const finalUrl = signedData?.signedUrl || dataUrl;
-        return saveProfile({
-          profileImage: finalUrl,
-        });
+        if (signedData?.signedUrl) finalUrl = signedData.signedUrl;
       }
 
-      // إذا لم يكن الـ bucket معداً بعد، نعتمد dataUrl المضغوط كبديل آمن
-      return saveProfile({ profileImage: dataUrl });
+      // ⚖️ خط الدفاع الثاني: وضع الصورة بحالة (pending_approval)
+      // تظل مخفية عن بقية المستخدمين حتى يعتمدها المشرف من لوحة الإدارة
+      const saveRes = await saveProfile({
+        profileImage: finalUrl,
+        photoModerationStatus: "pending_approval",
+        photoSubmittedAt: new Date().toISOString(),
+      });
+
+      return {
+        ...saveRes,
+        data: {
+          status: "pending_approval",
+          message: "تم رفع صورتك بنجاح. وحرصاً على الأمان والوقار، تخضع الصورة لمراجعة سريعة من الإدارة قبل ظهورها للعامة."
+        }
+      };
     } catch (err: any) {
       return fail(err);
     }
@@ -987,8 +1011,25 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return res;
   };
 
-  const reportProfile = (toUserId: string, reason: string) =>
-    insertInteraction(toUserId, "report", reason.trim().slice(0, 500));
+  // 🚨 خط الدفاع الثالث: الإبلاغ المجتمعي مع التجميد التلقائي للصور المشبوهة
+  const reportProfile = async (toUserId: string, reason: string): Promise<ActionResult> => {
+    const cleanReason = reason.trim().slice(0, 500);
+    try {
+      const { data, error } = await supabase.rpc("report_profile_with_defense_rpc", {
+        p_reported_user_id: toUserId,
+        p_reason: cleanReason,
+      });
+
+      if (!error && data?.photo_frozen) {
+        // تحديث محلي فوري لتجميد الصورة من العرض
+        setProfiles(prev =>
+          prev.map(p => (p.id === toUserId ? { ...p, photoModerationStatus: "frozen_by_reports" } : p))
+        );
+      }
+    } catch (_) {}
+
+    return insertInteraction(toUserId, "report", cleanReason);
+  };
 
   const recordProfileView = async (viewedId: string): Promise<void> => {
     if (!currentUser || currentUser.id === viewedId) return;
@@ -1794,6 +1835,65 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     );
   }, []);
 
+  // ------------------------------------------------------------------
+  // ⚖️ خط الدفاع الثاني: إدارة واعتماد الصور الشخصية
+  // ------------------------------------------------------------------
+  const adminApprovePhoto = async (userId: string): Promise<ActionResult> => {
+    if (!isAdmin) return { ok: false, error: "هذا الإجراء مخصص لإدارة المنصة فقط." };
+    try {
+      const { error } = await supabase.rpc("admin_approve_photo_rpc", { p_user_id: userId });
+      if (error) {
+        // تحديث محلي في حال لم يُشغّل الـ RPC بعد
+        await supabase.from("profiles").update({ photo_moderation_status: "approved" }).eq("id", userId);
+      }
+
+      setProfiles(prev =>
+        prev.map(p => (p.id === userId ? { ...p, photoModerationStatus: "approved", photoRejectedReason: undefined } : p))
+      );
+      if (currentUser?.id === userId) {
+        setCurrentUser(prev => prev ? { ...prev, photoModerationStatus: "approved" } : prev);
+      }
+      return { ok: true };
+    } catch (err) {
+      return fail(err);
+    }
+  };
+
+  const adminRejectPhoto = async (userId: string, reason: string): Promise<ActionResult> => {
+    if (!isAdmin) return { ok: false, error: "هذا الإجراء مخصص لإدارة المنصة فقط." };
+    const cleanReason = reason.trim() || "الصورة غير مطابقة لمعايير الوقار والوضوح.";
+    try {
+      const { error } = await supabase.rpc("admin_reject_photo_rpc", {
+        p_user_id: userId,
+        p_reason: cleanReason,
+      });
+
+      if (error) {
+        await supabase.from("profiles").update({
+          photo_moderation_status: "rejected",
+          photo_rejected_reason: cleanReason,
+          profile_image_url: null,
+        }).eq("id", userId);
+      }
+
+      setProfiles(prev =>
+        prev.map(p =>
+          p.id === userId
+            ? { ...p, photoModerationStatus: "rejected", photoRejectedReason: cleanReason, profileImage: null }
+            : p
+        )
+      );
+      if (currentUser?.id === userId) {
+        setCurrentUser(prev =>
+          prev ? { ...prev, photoModerationStatus: "rejected", photoRejectedReason: cleanReason, profileImage: null } : prev
+        );
+      }
+      return { ok: true };
+    } catch (err) {
+      return fail(err);
+    }
+  };
+
 
   return (
     <AppContext.Provider value={{
@@ -1890,6 +1990,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       fetchAcademyArticles,
       markArticleRead,
       rateArticle,
+
+      // Photo Moderation & Defense
+      adminApprovePhoto,
+      adminRejectPhoto,
     }}>
       {children}
     </AppContext.Provider>

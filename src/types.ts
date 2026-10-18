@@ -104,6 +104,10 @@ export interface UserProfile {
   viewsCount: number;
   scheduledDeletionAt?: string | null; // تاريخ الحذف النهائي بعد انتهاء فترة التبريد 30 يوماً
   academyPoints?: number; // نقاط أكاديمية الاستعداد للزواج
+  photoModerationStatus?: "unsubmitted" | "pending_approval" | "approved" | "rejected" | "frozen_by_reports";
+  photoRejectedReason?: string;
+  photoReportsCount?: number;
+  photoSubmittedAt?: string;
 }
 
 export type VerificationTierType = "phone" | "photo" | "id" | "docs";

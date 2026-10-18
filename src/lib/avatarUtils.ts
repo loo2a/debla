@@ -7,6 +7,7 @@ interface ProfileLike {
   gender?: Gender | string;
   profileImage?: string | null;
   photoPrivacy?: "public" | "accepted_interest_only" | "hidden";
+  photoModerationStatus?: "unsubmitted" | "pending_approval" | "approved" | "rejected" | "frozen_by_reports";
 }
 
 export const DEFAULT_MALE_AVATAR = Avatars.find((a) => a.id === "male_1")?.url || "";
@@ -14,7 +15,8 @@ export const DEFAULT_FEMALE_AVATAR = Avatars.find((a) => a.id === "female_1")?.u
 
 /**
  * دالة مساعدة مركزية لاختيار رابط الصورة أو الأفاتار المناسب بدقة
- * تحل مشكلة ظهور صورة رجل افتراضي للعضوات الإناث وتدعم كافة الأفاتارات الـ 10
+ * خط الدفاع: لا تظهر الصورة الحقيقية للعامة إلا إذا كانت معتمدة من الإدارة (approved)
+ * وغير مقفلة وليست مجمدة ببلاغات أو قيد المراجعة
  */
 export function getAvatarUrl(
   profileOrAvatar?: ProfileLike | string | null,
@@ -37,8 +39,9 @@ export function getAvatarUrl(
       : Avatars.find((a) => a.id === "male_1")!.url;
   }
 
-  // إذا كانت الصورة الشخصية الحقيقية موجودة وغير مقفلة
-  if (p.profileImage && !isPhotoLocked && p.photoPrivacy !== "hidden") {
+  // إذا كانت الصورة الشخصية الحقيقية موجودة ومعتمدة من الإدارة وغير مقفلة وغير مخفية
+  const isApproved = !p.photoModerationStatus || p.photoModerationStatus === "approved";
+  if (p.profileImage && isApproved && !isPhotoLocked && p.photoPrivacy !== "hidden") {
     return p.profileImage;
   }
 
