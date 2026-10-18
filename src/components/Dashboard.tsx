@@ -9,6 +9,7 @@ import {
   Menu, Sparkles, Heart, CheckCircle, Shield, 
   Users, Eye, Award, ExternalLink, HelpCircle, AlertTriangle, ChevronLeft 
 } from "lucide-react";
+import { CandidateSwipeCards } from "./CandidateSwipeCards";
 
 interface DashboardProps {
   onOpenSidebar?: () => void;
@@ -164,6 +165,9 @@ export const Dashboard: React.FC<DashboardProps> = ({
           </div>
         </div>
 
+        {/* Swipe Cards: 5 for Free users, 20 for Premium users */}
+        <CandidateSwipeCards onOpenProfile={handleSelectCandidate} />
+
         {/* Quick action banners */}
         <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
           <div className="p-5 flex justify-between items-center bg-slate-50 border-b border-slate-100">
@@ -268,6 +272,60 @@ export const Dashboard: React.FC<DashboardProps> = ({
           >
             تصفح المزيد من قصص النجاح والمباركات
           </button>
+        </div>
+
+        {/* Marriage Journey Explainer Feature Banner */}
+        <div className="bg-gradient-to-br from-emerald-900 to-teal-950 text-white rounded-3xl p-6 shadow-md border border-emerald-700/40 space-y-4 relative overflow-hidden">
+          <div className="flex items-center gap-2">
+            <div className="p-2 bg-emerald-500/20 text-emerald-300 rounded-xl border border-emerald-400/20">
+              <Sparkles className="w-5 h-5 fill-emerald-300" />
+            </div>
+            <div>
+              <h3 className="font-extrabold text-sm text-white">رحلة زواج بدل شات لا ينتهي 🎯</h3>
+              <p className="text-[11px] text-emerald-200">مسار تعارف شرعي هادف يمر بمراحل واضحة ومحددة</p>
+            </div>
+          </div>
+
+          <p className="text-xs text-emerald-100/90 leading-relaxed">
+            كل محادثة جادة في التطبيق تتقدم وفق 6 خطوات أساسية متفق عليها، مع تذكير مستمر بالخطوة التالية وإمكانية الاعتذار بأدب ودون إحراج:
+          </p>
+
+          <div className="grid grid-cols-2 gap-2 text-[11px] font-semibold text-emerald-200 bg-emerald-950/60 p-3 rounded-2xl border border-emerald-800/60">
+            <div className="flex items-center gap-1.5">
+              <span className="w-4 h-4 rounded-full bg-emerald-600 text-white flex items-center justify-center text-[9px] font-bold">1</span>
+              <span>اهتمام متبادل</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="w-4 h-4 rounded-full bg-emerald-600 text-white flex items-center justify-center text-[9px] font-bold">2</span>
+              <span>توافق أولي</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="w-4 h-4 rounded-full bg-emerald-600 text-white flex items-center justify-center text-[9px] font-bold">3</span>
+              <span>أسئلة مهمة ومصارحة</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="w-4 h-4 rounded-full bg-emerald-600 text-white flex items-center justify-center text-[9px] font-bold">4</span>
+              <span>إشراك الأسرة والولي</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="w-4 h-4 rounded-full bg-emerald-600 text-white flex items-center justify-center text-[9px] font-bold">5</span>
+              <span>لقاء رسمي ورؤية شرعية</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="w-4 h-4 rounded-full bg-emerald-600 text-white flex items-center justify-center text-[9px] font-bold">6</span>
+              <span>قرار الاستمرار أو الاعتذار</span>
+            </div>
+          </div>
+
+          <div className="pt-1 flex items-center justify-between">
+            <span className="text-[10px] text-emerald-300">يسمح بإنهاء التعارف بأدب من غير ضغط أو إحراج</span>
+            <button
+              onClick={() => navigate("/inbox")}
+              className="px-4 py-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs rounded-xl shadow-xs transition cursor-pointer"
+            >
+              متابعة محادثاتك
+            </button>
+          </div>
         </div>
 
         {/* Matrimonial Guide lines */}

@@ -7,6 +7,8 @@ import {
 } from "lucide-react";
 import { useParams, useNavigate } from "react-router-dom";
 import { getAvatarUrl } from "../lib/avatarUtils";
+import { MarriageJourneyTracker } from "./MarriageJourneyTracker";
+import { getJourneyState, MARRIAGE_STAGES } from "../lib/marriageJourney";
 
 interface InboxPageProps {
   selectedChatUserId?: string | null;
@@ -217,6 +219,9 @@ export const InboxPage: React.FC<InboxPageProps> = ({
               </span>
             </div>
 
+            {/* Marriage Journey Tracker: 6 defined stages with reminders & polite apology exit */}
+            <MarriageJourneyTracker partner={activeChatPartner} />
+
             {/* Chat Body messages list */}
             <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-slate-50/50">
               {activeChatMessages.map(msg => {
@@ -346,10 +351,31 @@ export const InboxPage: React.FC<InboxPageProps> = ({
                             referrerPolicy="no-referrer"
                           />
                           <div className="text-right truncate">
-                            <h4 className="font-bold text-slate-800 text-xs sm:text-sm flex items-center gap-1 truncate">
-                              {item.partner.name}
-                              {item.partner.isVerified && <ShieldCheck className="w-4 h-4 text-emerald-600 flex-shrink-0" />}
-                            </h4>
+                            <div className="flex items-center gap-1.5 truncate">
+                              <h4 className="font-bold text-slate-800 text-xs sm:text-sm flex items-center gap-1 truncate">
+                                {item.partner.name}
+                                {item.partner.isVerified && <ShieldCheck className="w-4 h-4 text-emerald-600 flex-shrink-0" />}
+                              </h4>
+                              {(() => {
+                                const partnerJourney = getJourneyState(currentUser.id, item.partner.id);
+                                const stageInfo = MARRIAGE_STAGES.find(s => s.stage === partnerJourney.currentStage);
+                                return (
+                                  <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full border flex-shrink-0 ${
+                                    partnerJourney.status === "concluded"
+                                      ? "bg-rose-50 text-rose-700 border-rose-200"
+                                      : partnerJourney.status === "completed"
+                                      ? "bg-amber-50 text-amber-800 border-amber-200"
+                                      : "bg-emerald-50 text-emerald-800 border-emerald-200"
+                                  }`}>
+                                    {partnerJourney.status === "concluded" 
+                                      ? "اعتذار بأدب" 
+                                      : partnerJourney.status === "completed" 
+                                      ? "مبارك الخطوبة" 
+                                      : `${stageInfo?.shortTitle || `مرحلة ${partnerJourney.currentStage}`}`}
+                                  </span>
+                                );
+                              })()}
+                            </div>
                             <p className="text-[10px] text-slate-400 truncate leading-relaxed">
                               {item.lastMessage ? item.lastMessage.content : "ابدأ التحدث الشرعي الجاد..."}
                             </p>

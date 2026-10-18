@@ -7,7 +7,7 @@ import { getAvatarUrl } from "../lib/avatarUtils";
 import { 
   Heart, EyeOff, Ban, AlertTriangle, MessageSquare, 
   Bookmark, ArrowRight, ShieldCheck, Sparkles, MapPin, 
-  User, CheckCircle, HelpCircle, Lock, Check 
+  User, CheckCircle, HelpCircle, Lock, Check, Share2 
 } from "lucide-react";
 
 interface ProfileDetailsProps {
@@ -161,12 +161,40 @@ export const ProfileDetails: React.FC<ProfileDetailsProps> = ({
     }
   };
 
+  const handleShareProfile = async () => {
+    const title = `ملف تعريفي لطلب زواج شرعي (${profile.name || profile.memberNumber})`;
+    const text = `اطلعت على هذا الملف التعريفي الجاد على تطبيق مودة ورحمة:\nعضوية: ${profile.memberNumber}\nالعمر: ${profile.age} سنة\nالإقامة: ${profile.residence} (${profile.nationality})\nالمؤهل: ${profile.education} - ${profile.profession}`;
+    const url = window.location.href;
+
+    if (navigator.share) {
+      try {
+        await navigator.share({ title, text, url });
+        return;
+      } catch {}
+    }
+    if (navigator.clipboard) {
+      await navigator.clipboard.writeText(`${title}\n${text}\n${url}`);
+      addToast("تم نسخ رابط وتفاصيل الملف بنجاح! يمكنك مشاركته مع الأهل.", "success");
+    }
+  };
+
   return (
     <div className="pb-24 pt-4 font-sans text-right bg-slate-50 min-h-screen relative" dir="rtl">
       
-      {/* Breadcrumb info */}
+      {/* Breadcrumb & Actions info */}
       <div className="max-w-xl mx-auto px-4 py-1 flex justify-between items-center text-xs text-slate-400 font-mono">
-        <span>عضوية رقم: {profile.memberNumber}</span>
+        <div className="flex items-center gap-3">
+          <span>عضوية رقم: {profile.memberNumber}</span>
+          <button
+            type="button"
+            onClick={() => void handleShareProfile()}
+            className="flex items-center gap-1 text-slate-600 hover:text-emerald-700 bg-white border border-slate-200 px-2.5 py-1 rounded-lg text-xs font-sans font-medium transition cursor-pointer"
+            title="مشاركة الملف مع الأهل"
+          >
+            <Share2 className="w-3.5 h-3.5" />
+            <span>مشاركة الملف</span>
+          </button>
+        </div>
         <button 
           onClick={handleBack}
           className="text-emerald-700 hover:underline font-sans font-medium flex items-center gap-1"
@@ -249,6 +277,28 @@ export const ProfileDetails: React.FC<ProfileDetailsProps> = ({
             >
               <Check className="w-3.5 h-3.5" />
               <span>قبول الاهتمام</span>
+            </button>
+          </div>
+        )}
+
+        {/* Marriage Journey Banner on Profile */}
+        {(hasAcceptedInterest || isInterested) && (
+          <div className="bg-gradient-to-l from-emerald-800 to-teal-800 rounded-2xl p-4 text-white shadow-sm flex items-center justify-between gap-3">
+            <div className="space-y-0.5">
+              <div className="flex items-center gap-1.5 text-xs font-extrabold text-emerald-200">
+                <Sparkles className="w-3.5 h-3.5 fill-emerald-300" />
+                <span>رحلة زواج بدل شات لا ينتهي</span>
+              </div>
+              <p className="text-[11px] text-white font-medium">
+                مسار تعارف شرعي هادف يمر بمراحل واضحة تنتهي بإشراك الأسرة واللقاء الرسمي.
+              </p>
+            </div>
+            <button
+              onClick={() => handleOpenChatScreen(profile.id)}
+              className="px-3.5 py-2 bg-white text-emerald-800 rounded-xl text-xs font-bold hover:bg-emerald-50 transition flex items-center gap-1 flex-shrink-0 shadow-xs cursor-pointer"
+            >
+              <span>متابعة المسار</span>
+              <ArrowRight className="w-3.5 h-3.5" />
             </button>
           </div>
         )}

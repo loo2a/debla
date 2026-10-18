@@ -6,12 +6,13 @@ import { getAvatarUrl } from "../lib/avatarUtils";
 import { 
   Menu, ArrowRight, Shield, Sparkles, Search, 
   Bell, User, ShieldAlert, Heart, EyeOff, Users, 
-  HelpCircle, FileText, Info
+  HelpCircle, FileText, Info, Share2
 } from "lucide-react";
+import { shareMawadaApp } from "../lib/shareUtils";
 
 export const AppHeader: React.FC = () => {
   const { currentUser } = useApp();
-  const { setSidebarOpen } = useUIStore();
+  const { setSidebarOpen, addToast } = useUIStore();
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -81,6 +82,13 @@ export const AppHeader: React.FC = () => {
   const pageInfo = getPageInfo();
   const Icon = pageInfo.icon;
 
+  const handleShare = async () => {
+    const res = await shareMawadaApp();
+    if (res.success && res.method === "clipboard") {
+      addToast("تم نسخ رابط تطبيق مودة ورحمة بنجاح! شاركه مع الأهل والأصدقاء.", "success");
+    }
+  };
+
   return (
     <header 
       className="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-slate-100 shadow-sm"
@@ -140,8 +148,18 @@ export const AppHeader: React.FC = () => {
           )}
         </div>
 
-        {/* Left side: User Avatar */}
-        <div className="flex items-center">
+        {/* Left side: Share Button + User Avatar */}
+        <div className="flex items-center gap-1.5">
+          <button
+            type="button"
+            onClick={() => void handleShare()}
+            className="p-2 rounded-xl text-slate-600 hover:text-emerald-700 hover:bg-slate-100 transition active:scale-95 cursor-pointer"
+            aria-label="مشاركة التطبيق"
+            title="مشاركة التطبيق مع الأهل والأصدقاء"
+          >
+            <Share2 className="w-5 h-5" />
+          </button>
+
           <button
             type="button"
             onClick={() => navigate("/my-profile")}
