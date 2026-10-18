@@ -47,6 +47,20 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ onComplete }) 
       desc: "فلاتر شاملة للالتزام الديني، الصلاة، التعليم، السكن، ورأي الطرفين في تكاليف الزواج لتيسير بناء بيت صالح على مودة ورحمة.",
       bg: "bg-teal-50",
     },
+    {
+      icon: <HeartHandshake className="w-12 h-12 text-rose-600" />,
+      badge: "رحلة تعارف واضحة",
+      title: "مراحل منضبطة نحو اللقاء الرسمي",
+      desc: "كل تعارف يمر بمراحل واضحة: اهتمام متبادل ← توافق أولي ← أسئلة مهمة ← إشراك الأسرة والولي ← لقاء شرعي رسمي.",
+      bg: "bg-rose-50",
+    },
+    {
+      icon: <CheckCircle2 className="w-12 h-12 text-emerald-700" />,
+      badge: "خطوتك الأولى",
+      title: "استبيان التوافق وإكمال البيانات",
+      desc: "أكمل ملفك الشخصي واملأ استبيان التوافق وحدد الخطوط الحمراء لتصلك ترشيحات مطابقة ومضمونة بإذن الله.",
+      bg: "bg-emerald-50",
+    },
   ];
 
   const current = slides[currentStep];

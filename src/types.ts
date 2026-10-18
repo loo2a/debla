@@ -102,6 +102,7 @@ export interface UserProfile {
   isOnline: boolean;
   lastSeen?: string;
   viewsCount: number;
+  scheduledDeletionAt?: string | null; // تاريخ الحذف النهائي بعد انتهاء فترة التبريد 30 يوماً
 }
 
 export type VerificationTierType = "phone" | "photo" | "id" | "docs";

@@ -7,34 +7,51 @@ import { useApp } from "../lib/store";
 
 export const DeleteAccountPage: React.FC = () => {
   const navigate = useNavigate();
-  const { currentUser, logout } = useApp();
+  const { currentUser, deleteMyAccount, cancelAccountDeletion } = useApp();
 
   const [email, setEmail] = useState("");
   const [reason, setReason] = useState("");
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isCancelling, setIsCancelling] = useState(false);
   const [directDeleteError, setDirectDeleteError] = useState<string | null>(null);
 
-  const handleLoggedInDelete = async () => {
-    if (!window.confirm("تحذير نهائي: هل أنت متأكد تماماً من رغبتك في حذف حسابك ومسح جميع بياناتك وصورك بشكل لا رجعة فيه؟")) {
+  // حذف مجدول مع فترة تبريد 30 يوماً متوافقة مع Google Play
+  const handleScheduledDelete = async () => {
+    if (!window.confirm("سيتم تعطيل حسابك وإخفاء ملفك فوراً، وسيكون بإمكانك التراجع خلال 30 يوماً قبل الحذف النهائي لكافة البيانات. هل أنت موافق؟")) {
       return;
     }
 
     setIsDeleting(true);
     setDirectDeleteError(null);
     try {
-      const { supabase } = await import("../lib/supabase");
-      const { data, error } = await supabase.rpc("delete_my_account_rpc");
-      if (error) {
-        setDirectDeleteError(error.message || "تعذر إتمام عملية الحذف. يرجى التواصل مع الدعم.");
+      const res = await deleteMyAccount(false);
+      if (!res.ok) {
+        setDirectDeleteError(res.error || "تعذر إتمام طلب الحذف.");
       } else {
-        await logout();
         setIsSubmitted(true);
       }
     } catch (err: any) {
       setDirectDeleteError(err?.message || "حدث خطأ غير متوقع.");
     } finally {
       setIsDeleting(false);
+    }
+  };
+
+  // إلغاء طلب الحذف أثناء فترة التبريد
+  const handleCancelDeletion = async () => {
+    setIsCancelling(true);
+    try {
+      const res = await cancelAccountDeletion();
+      if (!res.ok) {
+        setDirectDeleteError(res.error || "تعذر إلغاء الحذف.");
+      } else {
+        alert("تم إلغاء طلب الحذف واستعادة حسابك بنجاح والحمد لله!");
+      }
+    } catch (err: any) {
+      setDirectDeleteError(err?.message || "حدث خطأ غير متوقع.");
+    } finally {
+      setIsCancelling(false);
     }
   };
 
@@ -94,6 +111,7 @@ export const DeleteAccountPage: React.FC = () => {
               </p>
             </div>
 
+            {/* If logged in */}
             {currentUser ? (
               <div className="border border-slate-200 rounded-2xl p-5 space-y-4 bg-slate-50/50">
                 <div>
@@ -101,22 +119,42 @@ export const DeleteAccountPage: React.FC = () => {
                   <p className="text-xs text-slate-500 font-mono mt-0.5">{currentUser.name} ({currentUser.memberNumber})</p>
                 </div>
 
-                {directDeleteError && (
-                  <p className="text-xs text-rose-600 bg-rose-50 p-2.5 rounded-xl border border-rose-100">
-                    {directDeleteError}
-                  </p>
+                {currentUser.scheduledDeletionAt ? (
+                  <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 space-y-3">
+                    <div className="flex items-center gap-2 text-amber-800 font-bold text-xs">
+                      <AlertTriangle className="w-4 h-4 text-amber-600" />
+                      <span>حسابك مجدول للحذف النهائي بتاريخ {new Date(currentUser.scheduledDeletionAt).toLocaleDateString("ar-EG")}</span>
+                    </div>
+                    <p className="text-[11px] text-amber-700 leading-relaxed">
+                      خلال هذه الفترة (30 يوماً)، تم إخفاء ملفك الشخصي ومنع التواصل. يمكنك إلغاء الحذف فوراً واستعادة حسابك بالضغط على الزر أدناه.
+                    </p>
+                    <Button
+                      onClick={handleCancelDeletion}
+                      variant="primary"
+                      disabled={isCancelling}
+                      className="w-full text-xs py-2.5 bg-emerald-700 hover:bg-emerald-800"
+                    >
+                      {isCancelling ? "جاري الاستعادة..." : "إلغاء الحذف واستعادة الحساب الآن"}
+                    </Button>
+                  </div>
+                ) : (
+                  <>
+                    <p className="text-[11px] text-slate-500 leading-relaxed">
+                      عند طلب الحذف، سيتم تعطيل حسابك وإخفاء ملفك فوراً مع منحك فترة سماح مدتها 30 يوماً يمكنك خلالها التراجع، وبعد انقضائها تُمسح كافة البيانات والصور نهائياً.
+                    </p>
+                    <Button 
+                      onClick={handleScheduledDelete}
+                      variant="danger" 
+                      disabled={isDeleting}
+                      className="w-full text-xs py-3"
+                    >
+                      {isDeleting ? "جاري تقديم طلب الحذف..." : "طلب حذف الحساب (فترة تبريد 30 يوماً)"}
+                    </Button>
+                  </>
                 )}
-
-                <Button 
-                  onClick={handleLoggedInDelete}
-                  variant="danger" 
-                  disabled={isDeleting}
-                  className="w-full text-xs py-3"
-                >
-                  {isDeleting ? "جاري حذف الحساب والبيانات..." : "حذف حسابي وبياناتي نهائياً الآن"}
-                </Button>
               </div>
             ) : (
+              /* If public / not logged in request form */
               <form onSubmit={handleWebFormSubmit} className="space-y-4">
                 <div className="space-y-1">
                   <h3 className="font-bold text-slate-800 text-sm">تقديم طلب حذف حساب خارجي:</h3>
@@ -161,4 +199,4 @@ export const DeleteAccountPage: React.FC = () => {
       </div>
     </div>
   );
-}; 
+};

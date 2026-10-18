@@ -6,6 +6,7 @@ import { SearchProfileCard } from "./search/SearchProfileCard";
 import { EmptyState } from "./ui/EmptyState";
 import { Search, UserX, Share2 } from "lucide-react";
 import { ProfileCardSkeleton } from "./ui/Skeleton";
+import { LazyCard } from "./ui/LazyCard";
 import { useNavigate } from "react-router-dom";
 import { shareMawadaApp } from "../lib/shareUtils";
 
@@ -52,6 +53,7 @@ export const SearchPage: React.FC<SearchPageProps> = ({ onSelectProfile }) => {
     qaIma: "all",
     mahr: "all",
     timeframe: "all",
+    redFlags: [],
   });
 
   const [currentPage, setCurrentPage] = useState<number>(1);
@@ -83,6 +85,7 @@ export const SearchPage: React.FC<SearchPageProps> = ({ onSelectProfile }) => {
           maxHeight: filter.isAdvanced && filter.heightTo < 210 ? filter.heightTo : undefined,
           hijabType: filter.isAdvanced && filter.hijab !== "all" ? filter.hijab : undefined,
           hasBeard: filter.isAdvanced && filter.beard !== "all" ? (filter.beard === "yes") : undefined,
+          redFlags: filter.redFlags?.length > 0 ? filter.redFlags : undefined,
           sortBy: filter.sortBy === "joinDate" ? "latest" : filter.sortBy === "age" ? "age_asc" : "activity",
           page: currentPage,
           pageSize,
@@ -176,6 +179,7 @@ export const SearchPage: React.FC<SearchPageProps> = ({ onSelectProfile }) => {
                     qaIma: "all",
                     mahr: "all",
                     timeframe: "all",
+                    redFlags: [],
                   });
                   setCurrentPage(1);
                 }}
@@ -200,11 +204,12 @@ export const SearchPage: React.FC<SearchPageProps> = ({ onSelectProfile }) => {
           ) : (
             <div className="grid grid-cols-1 gap-4">
               {results.map((p) => (
-                <SearchProfileCard
-                  key={p.id}
-                  profile={p}
-                  onClick={() => handleCardClick(p.id)}
-                />
+                <LazyCard key={p.id}>
+                  <SearchProfileCard
+                    profile={p}
+                    onClick={() => handleCardClick(p.id)}
+                  />
+                </LazyCard>
               ))}
 
               {totalPages > 1 && (

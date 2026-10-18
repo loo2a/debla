@@ -42,7 +42,8 @@ interface AppContextType {
   uploadCustomImage: (fileOrBase64: File | Blob | string) => Promise<ActionResult>;
   updatePhotoPrivacy: (privacy: "public" | "accepted_interest_only" | "hidden") => Promise<ActionResult>;
   toggleIncognitoMode: () => Promise<ActionResult>;
-  deleteMyAccount: () => Promise<ActionResult>;
+  deleteMyAccount: (immediate?: boolean) => Promise<ActionResult>;
+  cancelAccountDeletion: () => Promise<ActionResult>;
   logout: () => Promise<void>;
   clearActionError: () => void;
 
@@ -221,6 +222,7 @@ const toProfile = (row: any, priv?: any, sensitive?: any, pref?: any): UserProfi
   isOnline: row.is_online ?? row.isOnline ?? false,
   lastSeen: row.last_seen || row.lastSeen,
   viewsCount: row.viewsCount ?? 0,
+  scheduledDeletionAt: row.scheduled_deletion_at || row.scheduledDeletionAt || null,
 });
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -699,11 +701,21 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     resetState();
   };
 
-  const deleteMyAccount = async (): Promise<ActionResult> => {
+  const deleteMyAccount = async (immediate = false): Promise<ActionResult> => {
     if (!currentUser) return { ok: false, error: "يجب تسجيل الدخول أولاً." };
-    const { error } = await supabase.rpc("delete_my_account_rpc");
+    const { error } = await supabase.rpc("delete_my_account_rpc", { p_immediate: immediate });
     if (error) return fail(error);
     await logout();
+    return { ok: true };
+  };
+
+  const cancelAccountDeletion = async (): Promise<ActionResult> => {
+    if (!currentUser) return { ok: false, error: "يجب تسجيل الدخول أولاً." };
+    const { error } = await supabase.rpc("cancel_account_deletion_rpc");
+    if (error) return fail(error);
+    const updated = { ...currentUser, scheduledDeletionAt: null };
+    setCurrentUser(updated);
+    setProfiles(prev => prev.map(p => (p.id === currentUser.id ? updated : p)));
     return { ok: true };
   };
 
@@ -967,6 +979,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         p_is_verified_only: filter.isVerifiedOnly || false,
         p_hijab_type: filter.hijabType,
         p_has_beard: filter.hasBeard,
+        p_red_flags: filter.redFlags && filter.redFlags.length > 0 ? filter.redFlags : null,
         p_search_query: filter.searchQuery,
         p_sort_by: filter.sortBy || "latest",
         p_page: filter.page || 1,
@@ -1499,6 +1512,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       updatePhotoPrivacy,
       toggleIncognitoMode,
       deleteMyAccount,
+      cancelAccountDeletion,
       logout,
       clearActionError,
 

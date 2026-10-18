@@ -16,6 +16,7 @@ import { Skeleton, ProfileCardSkeleton } from "./components/ui/Skeleton";
 import { Button } from "./components/ui/Button";
 import { SplashScreen } from "./components/ui/SplashScreen";
 import { AppHeader } from "./components/AppHeader";
+import { OfflineBanner } from "./components/OfflineBanner";
 import { useEdgeSwipe } from "./hooks/useEdgeSwipe";
 
 // Lazy-loaded routes for optimal bundle splitting and performance
@@ -141,6 +142,8 @@ const AppContent: React.FC = () => {
 
   return (
     <div className="bg-slate-50 min-h-screen text-slate-800 pb-20 font-sans">
+      {/* Offline Alert Banner */}
+      <OfflineBanner />
       
       {/* Sidebar Menu */}
       <Sidebar 
