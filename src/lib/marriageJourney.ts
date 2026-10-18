@@ -9,6 +9,8 @@
  * 6. قرار الاستمرار أو الاعتذار
  */
 
+import { supabase } from "./supabase";
+
 export interface JourneyStageInfo {
   stage: number;
   title: string;
@@ -216,4 +218,60 @@ export function saveJourneyState(state: MarriageJourneyState): void {
   try {
     localStorage.setItem(storageKey, JSON.stringify(state));
   } catch {}
+}
+
+/**
+ * مزامنة حالة رحلة الزواج مع قاعدة البيانات Supabase
+ */
+export async function syncJourneyToSupabase(myId: string, partnerId: string, state: MarriageJourneyState): Promise<void> {
+  try {
+    const [userA, userB] = [myId, partnerId].sort();
+    await supabase.from("marriage_journeys").upsert({
+      pair_key: state.pairKey,
+      user_a: userA,
+      user_b: userB,
+      current_stage: state.currentStage,
+      status: state.status,
+      wali_name: state.waliContact?.name,
+      wali_phone: state.waliContact?.phone,
+      wali_relation: state.waliContact?.relationship,
+      concluded_reason: state.concludedReason,
+      updated_at: new Date().toISOString(),
+    });
+  } catch (err) {
+    console.warn("Could not sync journey to Supabase (offline fallback active):", err);
+  }
+}
+
+/**
+ * جلب حالة رحلة الزواج المشتركة من Supabase
+ */
+export async function fetchRemoteJourneyState(myId: string, partnerId: string): Promise<MarriageJourneyState | null> {
+  try {
+    const pairKey = getPairKey(myId, partnerId);
+    const { data, error } = await supabase
+      .from("marriage_journeys")
+      .select("*")
+      .eq("pair_key", pairKey)
+      .maybeSingle();
+
+    if (error || !data) return null;
+
+    const parsed: MarriageJourneyState = {
+      pairKey: data.pair_key,
+      currentStage: data.current_stage,
+      status: data.status,
+      updatedAt: data.updated_at,
+      waliContact: data.wali_name ? {
+        name: data.wali_name,
+        phone: data.wali_phone || "",
+        relationship: data.wali_relation || "الوالد",
+      } : undefined,
+      concludedReason: data.concluded_reason,
+    };
+    saveJourneyState(parsed);
+    return parsed;
+  } catch {
+    return null;
+  }
 }

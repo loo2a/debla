@@ -4,7 +4,8 @@ import { useUIStore } from "../stores/uiStore";
 import { UserProfile, Gender } from "../types";
 import { 
   MARRIAGE_STAGES, GUIDED_QUESTIONS, APOLOGY_TEMPLATES, 
-  getJourneyState, saveJourneyState, MarriageJourneyState 
+  getJourneyState, saveJourneyState, MarriageJourneyState,
+  syncJourneyToSupabase, fetchRemoteJourneyState
 } from "../lib/marriageJourney";
 import { 
   Heart, Compass, HelpCircle, Users, Home, CheckCircle2, 
@@ -55,7 +56,16 @@ export const MarriageJourneyTracker: React.FC<MarriageJourneyTrackerProps> = ({
   const isConcluded = journey.status === "concluded";
   const isCompleted = journey.status === "completed";
 
-  // حفظ التعديلات في LocalStorage
+  // جلب ومزامنة حالة رحلة الزواج المشتركة من السيرفر فور فتح المحادثة
+  useEffect(() => {
+    void fetchRemoteJourneyState(currentUser.id, partner.id).then((remote) => {
+      if (remote) {
+        setJourney(remote);
+      }
+    });
+  }, [currentUser.id, partner.id]);
+
+  // حفظ التعديلات في LocalStorage ومزامنتها على السيرفر مع الطرف الآخر
   const updateJourney = (updater: Partial<MarriageJourneyState>) => {
     const updated = {
       ...journey,
@@ -64,6 +74,7 @@ export const MarriageJourneyTracker: React.FC<MarriageJourneyTrackerProps> = ({
     };
     setJourney(updated);
     saveJourneyState(updated);
+    void syncJourneyToSupabase(currentUser.id, partner.id, updated);
   };
 
   // إرسال رسالة المحادثة (عبر الوسيط الممرر أو عبر store)
