@@ -741,7 +741,7 @@ export const MyProfilePage: React.FC = () => {
               </button>
             </div>
 
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-4 gap-2.5">
               {availableAvatars.map((av) => {
                 const isSelected = currentUser.avatar === av.id;
                 return (

@@ -32,7 +32,7 @@ export const StepAvatar: React.FC<StepAvatarProps> = ({
         </p>
       </div>
 
-      <div className="grid grid-cols-3 gap-3 pt-2">
+      <div className="grid grid-cols-4 gap-2.5 pt-2">
         {filteredAvatars.map((avatar) => {
           const isSelected = selected === avatar.id;
           return (
