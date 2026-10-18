@@ -6,7 +6,8 @@ import { getAvatarUrl } from "../lib/avatarUtils";
 import { motion, AnimatePresence } from "motion/react";
 import { 
   Home, Bell, User, Heart, EyeOff, Users, Award, 
-  Sparkles, Mail, Share2, LogOut, X, ShieldAlert, ShieldCheck 
+  Sparkles, Mail, Share2, LogOut, X, ShieldAlert, ShieldCheck,
+  GraduationCap
 } from "lucide-react";
 
 interface SidebarProps {
@@ -47,6 +48,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
       label: currentUser.accountRole?.startsWith("guardian_") ? "بوابة إشراف ولي الأمر" : "وضع الولي والأسرة", 
       icon: ShieldCheck,
       highlight: currentUser.accountRole?.startsWith("guardian_")
+    },
+    { 
+      id: "academy", 
+      path: "/academy", 
+      label: "أكاديمية الاستعداد للزواج", 
+      icon: GraduationCap,
+      badge: currentUser.academyPoints ? currentUser.academyPoints : undefined
     },
     { id: "notifications", path: "/inbox", label: "الإشعارات والبريد", icon: Bell, badge: unreadNotifications },
     { id: "profile", path: "/my-profile", label: "الملف الشخصي", icon: User },

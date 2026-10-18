@@ -36,6 +36,7 @@ const PrivacyPolicyPage = lazy(() => import("./pages/PrivacyPolicyPage").then(m 
 const TermsPage = lazy(() => import("./pages/TermsPage").then(m => ({ default: m.TermsPage })));
 const DeleteAccountPage = lazy(() => import("./pages/DeleteAccountPage").then(m => ({ default: m.DeleteAccountPage })));
 const GuardianPage = lazy(() => import("./pages/GuardianPage").then(m => ({ default: m.GuardianPage })));
+const AcademyPage = lazy(() => import("./pages/AcademyPage").then(m => ({ default: m.AcademyPage })));
 
 const PageLoadingFallback: React.FC = () => (
   <div className="p-4 space-y-4 max-w-md mx-auto pt-8" dir="rtl">
@@ -170,6 +171,7 @@ const AppContent: React.FC = () => {
               <Route path="/admin" element={<AdminPanel />} />
               <Route path="/my-profile" element={<MyProfilePage />} />
               <Route path="/guardian" element={<GuardianPage />} />
+              <Route path="/academy" element={<AcademyPage />} />
               <Route path="/interests" element={<InterestsPage />} />
               <Route path="/ignored" element={<IgnoredPage />} />
               <Route path="/who-interested" element={<WhoInterestedPage />} />

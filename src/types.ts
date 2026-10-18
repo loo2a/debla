@@ -103,6 +103,7 @@ export interface UserProfile {
   lastSeen?: string;
   viewsCount: number;
   scheduledDeletionAt?: string | null; // تاريخ الحذف النهائي بعد انتهاء فترة التبريد 30 يوماً
+  academyPoints?: number; // نقاط أكاديمية الاستعداد للزواج
 }
 
 export type VerificationTierType = "phone" | "photo" | "id" | "docs";
@@ -250,3 +251,41 @@ export interface AdminBroadcastMessage {
   createdAt?: string;
 }
 
+
+// ============================================================
+// Academy — أكاديمية الاستعداد للزواج
+// ============================================================
+
+export type ArticleCategory =
+  | "communication"
+  | "finance"
+  | "conflict"
+  | "expectations"
+  | "rights"
+  | "health";
+
+export interface AcademyArticle {
+  id: string;
+  title: string;
+  slug: string;
+  category: ArticleCategory;
+  summary: string;
+  content: string;
+  sources: string[];
+  readingTimeMin: number;
+  pointsReward: number;
+  displayOrder: number;
+  isPublished: boolean;
+  createdAt: string;
+  /** populated client-side after join with article_reads */
+  isRead?: boolean;
+  userRating?: number;
+}
+
+export interface ArticleRead {
+  id: string;
+  userId: string;
+  articleId: string;
+  rating?: number;
+  createdAt: string;
+}

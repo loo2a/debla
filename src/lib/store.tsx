@@ -4,7 +4,8 @@ import {
   PremiumSubscriptionRequest, SearchProfilesFilter, SearchProfilesResponse,
   VerificationTierType, GuardianLinkStatus, AccountRole,
   CompatibilitySurvey, ProfileEditRequest,
-  Coupon, AdminBroadcastMessage
+  Coupon, AdminBroadcastMessage,
+  AcademyArticle, ArticleRead
 } from "../types";
 import { supabase } from "./supabase";
 import { compressImage } from "./imageUtils";
@@ -116,6 +117,12 @@ interface AppContextType {
   // Admin Direct User Management (التحكم في الحسابات والاشتراكات المباشرة)
   adminGrantPremium: (userId: string, durationDays: number) => Promise<ActionResult>;
   adminRevokePremium: (userId: string) => Promise<ActionResult>;
+
+  // Academy — أكاديمية الاستعداد للزواج
+  academyArticles: AcademyArticle[];
+  fetchAcademyArticles: () => Promise<void>;
+  markArticleRead: (articleId: string) => Promise<{ pointsAwarded: number; alreadyRead: boolean }>;
+  rateArticle: (articleId: string, rating: number) => Promise<void>;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -237,6 +244,7 @@ const toProfile = (row: any, priv?: any, sensitive?: any, pref?: any): UserProfi
   lastSeen: row.last_seen || row.lastSeen,
   viewsCount: row.viewsCount ?? 0,
   scheduledDeletionAt: row.scheduled_deletion_at || row.scheduledDeletionAt || null,
+  academyPoints: row.academy_points ?? row.academyPoints ?? 0,
 });
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -253,6 +261,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [allSurveys, setAllSurveys] = useState<Map<string, CompatibilitySurvey>>(new Map());
   const [profileEditRequests, setProfileEditRequests] = useState<ProfileEditRequest[]>([]);
   const [coupons, setCoupons] = useState<Coupon[]>([]);
+  const [academyArticles, setAcademyArticles] = useState<AcademyArticle[]>([]);
 
   const [dbError, setDbError] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
@@ -292,6 +301,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setAllSurveys(new Map());
     setProfileEditRequests([]);
     setCoupons([]);
+    setAcademyArticles([]);
   }, []);
 
   const fetchGuardianStatus = useCallback(async (): Promise<GuardianLinkStatus | null> => {
@@ -1634,6 +1644,107 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
+  // ------------------------------------------------------------------
+  // Academy — أكاديمية الاستعداد للزواج
+  // ------------------------------------------------------------------
+  const fetchAcademyArticles = useCallback(async (): Promise<void> => {
+    try {
+      const { data: articlesData, error: articlesErr } = await supabase
+        .from("academy_articles")
+        .select("*")
+        .eq("is_published", true)
+        .order("display_order", { ascending: true });
+
+      if (articlesErr) {
+        console.warn("fetchAcademyArticles error:", articlesErr);
+        return;
+      }
+
+      const readMap = new Map<string, { rating?: number }>();
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user?.id) {
+        const { data: readsData } = await supabase
+          .from("article_reads")
+          .select("article_id, rating")
+          .eq("user_id", session.user.id);
+
+        (readsData || []).forEach((r: any) => {
+          readMap.set(r.article_id, { rating: r.rating });
+        });
+      }
+
+      const formatted: AcademyArticle[] = (articlesData || []).map((row: any) => {
+        const readInfo = readMap.get(row.id);
+        return {
+          id: row.id,
+          title: row.title,
+          slug: row.slug,
+          category: row.category,
+          summary: row.summary,
+          content: row.content,
+          sources: row.sources || [],
+          readingTimeMin: row.reading_time_min ?? 5,
+          pointsReward: row.points_reward ?? 10,
+          displayOrder: row.display_order ?? 0,
+          isPublished: row.is_published ?? true,
+          createdAt: row.created_at,
+          isRead: !!readInfo,
+          userRating: readInfo?.rating,
+        };
+      });
+
+      setAcademyArticles(formatted);
+    } catch (err) {
+      console.error("fetchAcademyArticles failed:", err);
+    }
+  }, []);
+
+  const markArticleRead = useCallback(async (articleId: string): Promise<{ pointsAwarded: number; alreadyRead: boolean }> => {
+    try {
+      const { data, error } = await supabase.rpc("read_article_rpc", {
+        p_article_id: articleId,
+      });
+
+      if (error) throw error;
+
+      const pointsAwarded = Number(data?.points_awarded ?? 0);
+      const alreadyRead = Boolean(data?.already_read ?? false);
+
+      setAcademyArticles(prev =>
+        prev.map(a => (a.id === articleId ? { ...a, isRead: true } : a))
+      );
+
+      if (pointsAwarded > 0) {
+        setCurrentUser(prev => prev ? { ...prev, academyPoints: (prev.academyPoints || 0) + pointsAwarded } : prev);
+      }
+
+      return { pointsAwarded, alreadyRead };
+    } catch (err) {
+      console.error("markArticleRead error:", err);
+      throw err;
+    }
+  }, []);
+
+  const rateArticle = useCallback(async (articleId: string, rating: number): Promise<void> => {
+    try {
+      const { data, error } = await supabase.rpc("rate_article_rpc", {
+        p_article_id: articleId,
+        p_rating: rating,
+      });
+
+      if (error) throw error;
+      if (data && data.ok === false) throw new Error(data.error);
+
+      setAcademyArticles(prev =>
+        prev.map(a => (a.id === articleId ? { ...a, userRating: rating } : a))
+      );
+    } catch (err) {
+      console.error("rateArticle error:", err);
+      throw err;
+    }
+  }, []);
+
+
   return (
     <AppContext.Provider value={{
       currentUser,
@@ -1723,6 +1834,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       // Direct Premium
       adminGrantPremium,
       adminRevokePremium,
+
+      // Academy — أكاديمية الاستعداد للزواج
+      academyArticles,
+      fetchAcademyArticles,
+      markArticleRead,
+      rateArticle,
     }}>
       {children}
     </AppContext.Provider>
