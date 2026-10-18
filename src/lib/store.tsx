@@ -9,6 +9,7 @@ import {
 } from "../types";
 import { supabase } from "./supabase";
 import { compressImage } from "./imageUtils";
+import { INITIAL_ACADEMY_ARTICLES } from "./defaultAcademyArticles";
 
 export interface ActionResult {
   ok: boolean;
@@ -261,7 +262,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [allSurveys, setAllSurveys] = useState<Map<string, CompatibilitySurvey>>(new Map());
   const [profileEditRequests, setProfileEditRequests] = useState<ProfileEditRequest[]>([]);
   const [coupons, setCoupons] = useState<Coupon[]>([]);
-  const [academyArticles, setAcademyArticles] = useState<AcademyArticle[]>([]);
+  const [academyArticles, setAcademyArticles] = useState<AcademyArticle[]>(INITIAL_ACADEMY_ARTICLES);
 
   const [dbError, setDbError] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
@@ -1649,18 +1650,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // ------------------------------------------------------------------
   const fetchAcademyArticles = useCallback(async (): Promise<void> => {
     try {
-      const { data: articlesData, error: articlesErr } = await supabase
-        .from("academy_articles")
-        .select("*")
-        .eq("is_published", true)
-        .order("display_order", { ascending: true });
-
-      if (articlesErr) {
-        console.warn("fetchAcademyArticles error:", articlesErr);
-        return;
-      }
-
       const readMap = new Map<string, { rating?: number }>();
+
+      // جلب قراءات المستخدم من Supabase إن وُجدت
       const { data: { session } } = await supabase.auth.getSession();
       if (session?.user?.id) {
         const { data: readsData } = await supabase
@@ -1673,75 +1665,133 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         });
       }
 
-      const formatted: AcademyArticle[] = (articlesData || []).map((row: any) => {
-        const readInfo = readMap.get(row.id);
-        return {
-          id: row.id,
-          title: row.title,
-          slug: row.slug,
-          category: row.category,
-          summary: row.summary,
-          content: row.content,
-          sources: row.sources || [],
-          readingTimeMin: row.reading_time_min ?? 5,
-          pointsReward: row.points_reward ?? 10,
-          displayOrder: row.display_order ?? 0,
-          isPublished: row.is_published ?? true,
-          createdAt: row.created_at,
-          isRead: !!readInfo,
-          userRating: readInfo?.rating,
-        };
-      });
+      // محاولة جلب المقالات من قاعدة البيانات
+      const { data: articlesData, error: articlesErr } = await supabase
+        .from("academy_articles")
+        .select("*")
+        .eq("is_published", true)
+        .order("display_order", { ascending: true });
 
-      setAcademyArticles(formatted);
+      // إذا كانت قاعدة البيانات تحتوي على مقالات، نستخدمها
+      if (!articlesErr && articlesData && articlesData.length > 0) {
+        const formatted: AcademyArticle[] = articlesData.map((row: any) => {
+          const readInfo = readMap.get(row.id) || readMap.get(row.slug);
+          return {
+            id: row.id,
+            title: row.title,
+            slug: row.slug,
+            category: row.category,
+            summary: row.summary,
+            content: row.content,
+            sources: row.sources || [],
+            readingTimeMin: row.reading_time_min ?? 5,
+            pointsReward: row.points_reward ?? 10,
+            displayOrder: row.display_order ?? 0,
+            isPublished: row.is_published ?? true,
+            createdAt: row.created_at,
+            isRead: !!readInfo,
+            userRating: readInfo?.rating,
+          };
+        });
+        setAcademyArticles(formatted);
+      } else {
+        // في حال لم يتم تشغيل migration الـ SQL بعد على السيرفر، استخدام المقالات التأسيسية المدمجة
+        // مع فحص القراءات المحفوظة محلياً أو من السيرفر
+        let localReads: Record<string, { rating?: number }> = {};
+        try {
+          const raw = localStorage.getItem("debla_academy_reads");
+          if (raw) localReads = JSON.parse(raw);
+        } catch (_) {}
+
+        setAcademyArticles(prev =>
+          INITIAL_ACADEMY_ARTICLES.map(art => {
+            const readInfo = readMap.get(art.id) || readMap.get(art.slug) || localReads[art.id] || localReads[art.slug];
+            return {
+              ...art,
+              isRead: !!readInfo,
+              userRating: readInfo?.rating,
+            };
+          })
+        );
+      }
     } catch (err) {
-      console.error("fetchAcademyArticles failed:", err);
+      console.warn("fetchAcademyArticles fallback active:", err);
+      setAcademyArticles(INITIAL_ACADEMY_ARTICLES);
     }
   }, []);
 
   const markArticleRead = useCallback(async (articleId: string): Promise<{ pointsAwarded: number; alreadyRead: boolean }> => {
+    let pointsAwarded = 10;
+    let alreadyRead = false;
+
+    // العثور على المقال
+    const target = academyArticles.find(a => a.id === articleId || a.slug === articleId);
+    if (target) {
+      pointsAwarded = target.pointsReward;
+      if (target.isRead) {
+        alreadyRead = true;
+        return { pointsAwarded: 0, alreadyRead: true };
+      }
+    }
+
     try {
+      // محاولة استدعاء دالة قاعدة البيانات
       const { data, error } = await supabase.rpc("read_article_rpc", {
         p_article_id: articleId,
       });
 
-      if (error) throw error;
-
-      const pointsAwarded = Number(data?.points_awarded ?? 0);
-      const alreadyRead = Boolean(data?.already_read ?? false);
-
-      setAcademyArticles(prev =>
-        prev.map(a => (a.id === articleId ? { ...a, isRead: true } : a))
-      );
-
-      if (pointsAwarded > 0) {
-        setCurrentUser(prev => prev ? { ...prev, academyPoints: (prev.academyPoints || 0) + pointsAwarded } : prev);
+      if (!error && data && data.ok) {
+        pointsAwarded = Number(data.points_awarded ?? pointsAwarded);
+        alreadyRead = Boolean(data.already_read ?? false);
+      } else {
+        // Fallback محلي إن لم تكن الدالة منشأة في السيرفر بعد
+        try {
+          const raw = localStorage.getItem("debla_academy_reads") || "{}";
+          const parsed = JSON.parse(raw);
+          parsed[articleId] = { rating: target?.userRating };
+          localStorage.setItem("debla_academy_reads", JSON.stringify(parsed));
+        } catch (_) {}
       }
-
-      return { pointsAwarded, alreadyRead };
-    } catch (err) {
-      console.error("markArticleRead error:", err);
-      throw err;
+    } catch (_) {
+      // Fallback محلي
+      try {
+        const raw = localStorage.getItem("debla_academy_reads") || "{}";
+        const parsed = JSON.parse(raw);
+        parsed[articleId] = { rating: target?.userRating };
+        localStorage.setItem("debla_academy_reads", JSON.stringify(parsed));
+      } catch (_) {}
     }
-  }, []);
+
+    // تحديث الحالة محلياً
+    setAcademyArticles(prev =>
+      prev.map(a => (a.id === articleId || a.slug === articleId ? { ...a, isRead: true } : a))
+    );
+
+    if (!alreadyRead && pointsAwarded > 0) {
+      setCurrentUser(prev => prev ? { ...prev, academyPoints: (prev.academyPoints || 0) + pointsAwarded } : prev);
+    }
+
+    return { pointsAwarded, alreadyRead };
+  }, [academyArticles]);
 
   const rateArticle = useCallback(async (articleId: string, rating: number): Promise<void> => {
     try {
-      const { data, error } = await supabase.rpc("rate_article_rpc", {
+      await supabase.rpc("rate_article_rpc", {
         p_article_id: articleId,
         p_rating: rating,
       });
+    } catch (_) {}
 
-      if (error) throw error;
-      if (data && data.ok === false) throw new Error(data.error);
+    try {
+      const raw = localStorage.getItem("debla_academy_reads") || "{}";
+      const parsed = JSON.parse(raw);
+      parsed[articleId] = { ...(parsed[articleId] || {}), rating };
+      localStorage.setItem("debla_academy_reads", JSON.stringify(parsed));
+    } catch (_) {}
 
-      setAcademyArticles(prev =>
-        prev.map(a => (a.id === articleId ? { ...a, userRating: rating } : a))
-      );
-    } catch (err) {
-      console.error("rateArticle error:", err);
-      throw err;
-    }
+    setAcademyArticles(prev =>
+      prev.map(a => (a.id === articleId || a.slug === articleId ? { ...a, userRating: rating } : a))
+    );
   }, []);
 
 
