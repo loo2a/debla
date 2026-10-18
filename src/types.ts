@@ -229,3 +229,24 @@ export interface SearchProfilesResponse {
   totalPages: number;
 }
 
+export interface Coupon {
+  id: string;
+  code: string;
+  discountPercent: number; // مثلاً 20 يعني 20%
+  maxUses: number;
+  usedCount: number;
+  validUntil?: string;
+  isActive: boolean;
+  notes?: string;
+  createdAt?: string;
+}
+
+export interface AdminBroadcastMessage {
+  id?: string;
+  targetAudience: "all" | "regular_only" | "premium_only" | "males_only" | "females_only" | "specific_user";
+  targetUserId?: string;
+  title: string;
+  content: string;
+  createdAt?: string;
+}
+

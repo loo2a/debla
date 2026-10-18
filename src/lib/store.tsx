@@ -3,7 +3,8 @@ import {
   UserProfile, Message, Notification, SuccessStory, Interaction,
   PremiumSubscriptionRequest, SearchProfilesFilter, SearchProfilesResponse,
   VerificationTierType, GuardianLinkStatus, AccountRole,
-  CompatibilitySurvey, ProfileEditRequest
+  CompatibilitySurvey, ProfileEditRequest,
+  Coupon, AdminBroadcastMessage
 } from "../types";
 import { supabase } from "./supabase";
 import { compressImage } from "./imageUtils";
@@ -102,6 +103,19 @@ interface AppContextType {
   profileEditRequests: ProfileEditRequest[];
   submitProfileEditRequest: (requestedChanges: Record<string, any>, reason: string) => Promise<ActionResult>;
   adminReviewProfileEditRequest: (requestId: string, action: "approved" | "rejected", adminNotes?: string) => Promise<ActionResult>;
+
+  // Admin Coupons & Discounts (الكوبونات والخصومات)
+  coupons: Coupon[];
+  adminCreateCoupon: (coupon: Omit<Coupon, "id" | "usedCount" | "createdAt">) => Promise<ActionResult>;
+  adminToggleCoupon: (couponId: string, isActive: boolean) => Promise<ActionResult>;
+  adminDeleteCoupon: (couponId: string) => Promise<ActionResult>;
+
+  // Admin Broadcast Notifications (إرسال الإشعارات الشاملة أو المخصصة)
+  adminSendBroadcast: (broadcast: AdminBroadcastMessage) => Promise<ActionResult>;
+
+  // Admin Direct User Management (التحكم في الحسابات والاشتراكات المباشرة)
+  adminGrantPremium: (userId: string, durationDays: number) => Promise<ActionResult>;
+  adminRevokePremium: (userId: string) => Promise<ActionResult>;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -238,6 +252,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [mySurvey, setMySurvey] = useState<CompatibilitySurvey | null>(null);
   const [allSurveys, setAllSurveys] = useState<Map<string, CompatibilitySurvey>>(new Map());
   const [profileEditRequests, setProfileEditRequests] = useState<ProfileEditRequest[]>([]);
+  const [coupons, setCoupons] = useState<Coupon[]>([]);
 
   const [dbError, setDbError] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
@@ -276,6 +291,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setMySurvey(null);
     setAllSurveys(new Map());
     setProfileEditRequests([]);
+    setCoupons([]);
   }, []);
 
   const fetchGuardianStatus = useCallback(async (): Promise<GuardianLinkStatus | null> => {
@@ -325,7 +341,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const [
         adminRes, profilesRes, privateRes, sensitiveRes, prefRes,
         messagesRes, notificationsRes, interactionsRes, requestsRes, storiesRes,
-        surveysRes, editRequestsRes
+        surveysRes, editRequestsRes, couponsRes
       ] = await Promise.all([
         supabase.rpc("is_admin"),
         supabase.from("profiles").select("*").limit(100),
@@ -339,6 +355,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         supabase.from("success_stories").select("*").order("date", { ascending: false }),
         Promise.resolve(supabase.from("compatibility_surveys").select("*")).catch(() => ({ data: [] } as any)),
         Promise.resolve(supabase.from("profile_edit_requests").select("*").order("created_at", { ascending: false })).catch(() => ({ data: [] } as any)),
+        Promise.resolve(supabase.from("coupons").select("*").order("created_at", { ascending: false })).catch(() => ({ data: [] } as any)),
       ]);
 
       const firstError = [
@@ -435,6 +452,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         };
       });
       setProfileEditRequests(parsedEditRequests);
+
+      const parsedCoupons: Coupon[] = (couponsRes.data ?? []).map((row: any) => ({
+        id: row.id,
+        code: row.code,
+        discountPercent: row.discount_percent ?? row.discountPercent ?? 0,
+        maxUses: row.max_uses ?? row.maxUses ?? 0,
+        usedCount: row.used_count ?? row.usedCount ?? 0,
+        validUntil: row.valid_until || row.validUntil,
+        isActive: row.is_active ?? row.isActive ?? true,
+        notes: row.notes || "",
+        createdAt: row.created_at,
+      }));
+      setCoupons(parsedCoupons);
 
       setIsAdmin(adminRes.data === true);
       setProfiles(allProfiles);
@@ -1482,6 +1512,128 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
+  // ------------------------------------------------------------------
+  // Admin Coupon Operations (إدارة الكوبونات والخصومات)
+  // ------------------------------------------------------------------
+  const adminCreateCoupon = async (
+    coupon: Omit<Coupon, "id" | "usedCount" | "createdAt">
+  ): Promise<ActionResult> => {
+    if (!isAdmin) return { ok: false, error: "هذا الإجراء مخصص لإدارة المنصة فقط." };
+    try {
+      const cleanCode = coupon.code.trim().toUpperCase();
+      const { data, error } = await supabase.rpc("admin_create_coupon_rpc", {
+        p_code: cleanCode,
+        p_discount_percent: coupon.discountPercent,
+        p_max_uses: coupon.maxUses || 0,
+        p_valid_until: coupon.validUntil || null,
+        p_notes: coupon.notes || null,
+      });
+      if (error) return fail(error);
+      const newCoupon: Coupon = {
+        id: data?.id || ("cpn-" + Date.now()),
+        code: cleanCode,
+        discountPercent: coupon.discountPercent,
+        maxUses: coupon.maxUses,
+        usedCount: 0,
+        validUntil: coupon.validUntil,
+        isActive: true,
+        notes: coupon.notes,
+        createdAt: new Date().toISOString(),
+      };
+      setCoupons(prev => [newCoupon, ...prev]);
+      return { ok: true, data: newCoupon };
+    } catch (err) {
+      return fail(err);
+    }
+  };
+
+  const adminToggleCoupon = async (couponId: string, isActive: boolean): Promise<ActionResult> => {
+    if (!isAdmin) return { ok: false, error: "هذا الإجراء مخصص لإدارة المنصة فقط." };
+    try {
+      const { error } = await supabase.rpc("admin_toggle_coupon_rpc", {
+        p_coupon_id: couponId,
+        p_is_active: isActive,
+      });
+      if (error) return fail(error);
+      setCoupons(prev => prev.map(c => (c.id === couponId ? { ...c, isActive } : c)));
+      return { ok: true };
+    } catch (err) {
+      return fail(err);
+    }
+  };
+
+  const adminDeleteCoupon = async (couponId: string): Promise<ActionResult> => {
+    if (!isAdmin) return { ok: false, error: "هذا الإجراء مخصص لإدارة المنصة فقط." };
+    try {
+      const { error } = await supabase.rpc("admin_delete_coupon_rpc", {
+        p_coupon_id: couponId,
+      });
+      if (error) return fail(error);
+      setCoupons(prev => prev.filter(c => c.id !== couponId));
+      return { ok: true };
+    } catch (err) {
+      return fail(err);
+    }
+  };
+
+  // ------------------------------------------------------------------
+  // Admin Broadcast Messages (إرسال الإشعارات الجماعية والموجهة)
+  // ------------------------------------------------------------------
+  const adminSendBroadcast = async (broadcast: AdminBroadcastMessage): Promise<ActionResult> => {
+    if (!isAdmin) return { ok: false, error: "هذا الإجراء مخصص لإدارة المنصة فقط." };
+    if (!broadcast.title.trim() || !broadcast.content.trim()) {
+      return { ok: false, error: "يرجى كتابة عنوان الإشعار ومحتواه." };
+    }
+    try {
+      const { data, error } = await supabase.rpc("admin_send_broadcast_rpc", {
+        p_target_audience: broadcast.targetAudience,
+        p_target_user_id: broadcast.targetUserId || null,
+        p_title: broadcast.title.trim(),
+        p_content: broadcast.content.trim(),
+      });
+      if (error) return fail(error);
+      if (currentUser) {
+        await loadAll(currentUser.id, true);
+      }
+      return { ok: true, data };
+    } catch (err) {
+      return fail(err);
+    }
+  };
+
+  // ------------------------------------------------------------------
+  // Admin Direct Premium Management (تفعيل أو إلغاء التميز يدوياً)
+  // ------------------------------------------------------------------
+  const adminGrantPremium = async (userId: string, durationDays: number): Promise<ActionResult> => {
+    if (!isAdmin) return { ok: false, error: "هذا الإجراء مخصص لإدارة المنصة فقط." };
+    try {
+      const { data, error } = await supabase.rpc("admin_grant_premium_rpc", {
+        p_user_id: userId,
+        p_duration_days: durationDays,
+      });
+      if (error) return fail(error);
+      const expiry = data?.expiry_date || new Date(Date.now() + durationDays * 86400000).toISOString();
+      setProfiles(prev => prev.map(p => (p.id === userId ? { ...p, isPremium: true, premiumExpiryDate: expiry } : p)));
+      return { ok: true, data };
+    } catch (err) {
+      return fail(err);
+    }
+  };
+
+  const adminRevokePremium = async (userId: string): Promise<ActionResult> => {
+    if (!isAdmin) return { ok: false, error: "هذا الإجراء مخصص لإدارة المنصة فقط." };
+    try {
+      const { error } = await supabase.rpc("admin_revoke_premium_rpc", {
+        p_user_id: userId,
+      });
+      if (error) return fail(error);
+      setProfiles(prev => prev.map(p => (p.id === userId ? { ...p, isPremium: false, premiumExpiryDate: undefined } : p)));
+      return { ok: true };
+    } catch (err) {
+      return fail(err);
+    }
+  };
+
   return (
     <AppContext.Provider value={{
       currentUser,
@@ -1558,6 +1710,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       // Profile Edit Requests
       submitProfileEditRequest,
       adminReviewProfileEditRequest,
+
+      // Coupons & Discounts
+      coupons,
+      adminCreateCoupon,
+      adminToggleCoupon,
+      adminDeleteCoupon,
+
+      // Broadcasts
+      adminSendBroadcast,
+
+      // Direct Premium
+      adminGrantPremium,
+      adminRevokePremium,
     }}>
       {children}
     </AppContext.Provider>
