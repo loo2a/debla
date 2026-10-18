@@ -11,7 +11,7 @@ import {
 } from "lucide-react";
 
 interface DashboardProps {
-  onOpenSidebar: () => void;
+  onOpenSidebar?: () => void;
   setActiveScreen?: (screen: string) => void;
   onSelectProfile?: (userId: string) => void;
 }
@@ -65,35 +65,8 @@ export const Dashboard: React.FC<DashboardProps> = ({
   const profileScore = calculateProfileScore(currentUser);
 
   return (
-    <div className="pb-24 pt-4 font-sans text-right min-h-screen bg-slate-50" dir="rtl">
-      {/* Top Header Bar */}
-      <div className="bg-white border-b border-slate-100 px-6 py-4 flex justify-between items-center sticky top-0 z-20 shadow-sm">
-        <div className="flex items-center gap-3">
-          <button 
-            onClick={onOpenSidebar}
-            className="p-2 hover:bg-slate-100 rounded-xl text-slate-700 transition duration-150"
-            aria-label="فتح القائمة الرئيسية"
-          >
-            <Menu className="w-6 h-6" />
-          </button>
-          
-          <div className="flex items-center gap-1.5 bg-emerald-50 text-emerald-800 px-2.5 py-1 rounded-full text-xs font-semibold">
-            <Shield className="w-4 h-4 text-emerald-600" />
-            <span>نظام إسلامي جاد</span>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <img 
-            src={getAvatarUrl(currentUser)} 
-            alt={currentUser.name} 
-            className="w-10 h-10 rounded-full object-cover border border-slate-200"
-            referrerPolicy="no-referrer"
-          />
-        </div>
-      </div>
-
-      <div className="max-w-xl mx-auto px-4 mt-6 space-y-6">
+    <div className="pb-24 pt-2 font-sans text-right min-h-screen bg-slate-50" dir="rtl">
+      <div className="max-w-xl mx-auto px-4 mt-2 space-y-6">
         
         {/* Welcome Section Banner */}
         <div className="bg-gradient-to-l from-emerald-800 to-emerald-700 rounded-3xl p-6 text-white shadow-xl shadow-emerald-800/10 relative overflow-hidden">

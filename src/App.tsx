@@ -15,6 +15,8 @@ import { ErrorBoundary } from "./components/ui/ErrorBoundary";
 import { Skeleton, ProfileCardSkeleton } from "./components/ui/Skeleton";
 import { Button } from "./components/ui/Button";
 import { SplashScreen } from "./components/ui/SplashScreen";
+import { AppHeader } from "./components/AppHeader";
+import { useEdgeSwipe } from "./hooks/useEdgeSwipe";
 
 // Lazy-loaded routes for optimal bundle splitting and performance
 const Dashboard = lazy(() => import("./components/Dashboard").then(m => ({ default: m.Dashboard })));
@@ -48,6 +50,9 @@ const PageLoadingFallback: React.FC = () => (
 const AppContent: React.FC = () => {
   const { currentUser, isAuthReady, dbError, retryLoadData, logout } = useApp();
   const { isSidebarOpen, setSidebarOpen, isReviewModalOpen, closeReviewModal } = useUIStore();
+
+  // تفعيل إيماءة السحب من الحافة اليمنى لفتح/إغلاق القائمة الجانبية في كل الصفحات
+  useEdgeSwipe();
 
   useEffect(() => {
     if (isAuthReady) {
@@ -97,39 +102,39 @@ const AppContent: React.FC = () => {
 
   const location = useLocation();
 
-  // Public compliance routes accessible directly without login (Google Play Review Requirement)
-  if (location.pathname === "/privacy" || location.pathname === "/privacy-policy") {
-    return (
-      <ErrorBoundary>
-        <Suspense fallback={<PageLoadingFallback />}>
-          <PrivacyPolicyPage />
-        </Suspense>
-      </ErrorBoundary>
-    );
-  }
-
-  if (location.pathname === "/terms" || location.pathname === "/charter") {
-    return (
-      <ErrorBoundary>
-        <Suspense fallback={<PageLoadingFallback />}>
-          <TermsPage />
-        </Suspense>
-      </ErrorBoundary>
-    );
-  }
-
-  if (location.pathname === "/delete-account") {
-    return (
-      <ErrorBoundary>
-        <Suspense fallback={<PageLoadingFallback />}>
-          <DeleteAccountPage />
-        </Suspense>
-      </ErrorBoundary>
-    );
-  }
-
   // Not logged in, or onboarding (charter / profile) not finished yet
   if (!currentUser || !currentUser.agreedToCharter || !currentUser.name) {
+    // Public compliance routes accessible directly without login (Google Play Review Requirement)
+    if (location.pathname === "/privacy" || location.pathname === "/privacy-policy") {
+      return (
+        <ErrorBoundary>
+          <Suspense fallback={<PageLoadingFallback />}>
+            <PrivacyPolicyPage />
+          </Suspense>
+        </ErrorBoundary>
+      );
+    }
+
+    if (location.pathname === "/terms" || location.pathname === "/charter") {
+      return (
+        <ErrorBoundary>
+          <Suspense fallback={<PageLoadingFallback />}>
+            <TermsPage />
+          </Suspense>
+        </ErrorBoundary>
+      );
+    }
+
+    if (location.pathname === "/delete-account") {
+      return (
+        <ErrorBoundary>
+          <Suspense fallback={<PageLoadingFallback />}>
+            <DeleteAccountPage />
+          </Suspense>
+        </ErrorBoundary>
+      );
+    }
+
     return <AuthFlow />;
   }
 
@@ -142,12 +147,15 @@ const AppContent: React.FC = () => {
         onClose={() => setSidebarOpen(false)} 
       />
 
+      {/* Universal Top Header with Menu Button */}
+      <AppHeader />
+
       {/* Main Screen Routes */}
       <main className="max-w-md mx-auto">
         <ErrorBoundary>
           <Suspense fallback={<PageLoadingFallback />}>
             <Routes>
-              <Route path="/" element={<Dashboard onOpenSidebar={() => setSidebarOpen(true)} />} />
+              <Route path="/" element={<Dashboard />} />
               <Route path="/home" element={<Navigate to="/" replace />} />
               <Route path="/search" element={<SearchPage />} />
               <Route path="/profile/:userId" element={<ProfileDetails />} />
@@ -183,7 +191,7 @@ const AppContent: React.FC = () => {
     </div>
   );
 };
-
+ 
 export default function App() {
   if (supabaseConfigError) {
     return (

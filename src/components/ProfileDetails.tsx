@@ -164,16 +164,16 @@ export const ProfileDetails: React.FC<ProfileDetailsProps> = ({
   return (
     <div className="pb-24 pt-4 font-sans text-right bg-slate-50 min-h-screen relative" dir="rtl">
       
-      {/* Back Header */}
-      <div className="bg-white border-b border-slate-100 px-6 py-4 flex justify-between items-center sticky top-0 z-20 shadow-sm">
+      {/* Breadcrumb info */}
+      <div className="max-w-xl mx-auto px-4 py-1 flex justify-between items-center text-xs text-slate-400 font-mono">
+        <span>عضوية رقم: {profile.memberNumber}</span>
         <button 
           onClick={handleBack}
-          className="flex items-center gap-1.5 text-slate-600 hover:text-slate-900 transition font-semibold text-sm"
+          className="text-emerald-700 hover:underline font-sans font-medium flex items-center gap-1"
         >
-          <ArrowRight className="w-5 h-5" />
           <span>العودة للبحث</span>
+          <ArrowRight className="w-3.5 h-3.5" />
         </button>
-        <span className="text-xs text-slate-400 font-mono">تفاصيل العضو رقم {profile.memberNumber}</span>
       </div>
 
       <div className="max-w-xl mx-auto px-4 mt-6 space-y-6">
