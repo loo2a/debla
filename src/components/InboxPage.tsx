@@ -44,7 +44,7 @@ export const InboxPage: React.FC<InboxPageProps> = ({
   const { 
     currentUser, messages, notifications, profiles, sendMessage, 
     markMessagesAsRead, markNotificationAsRead, markAllNotificationsAsRead,
-    fetchProfileById 
+    fetchProfileById, guardianStatus 
   } = useApp();
 
   const [activeTab, setActiveTab] = useState<"messages" | "notifications">("messages");
@@ -119,27 +119,38 @@ export const InboxPage: React.FC<InboxPageProps> = ({
     }
   }, [selectedChatUserId, profiles, fetchProfileById]);
 
-  // Filter messages related to the current user
-  const myMessages = messages.filter(m => m.senderId === currentUser.id || m.receiverId === currentUser.id);
+  // تحديد ما إذا كان المستخدم الحالي ولي أمر يتصفح محادثات من يتولى أمره
+  const isGuardianViewingWard = Boolean(
+    guardianStatus?.isGuardian && 
+    guardianStatus?.hasLink && 
+    guardianStatus?.partnerId && 
+    guardianStatus?.canViewChat
+  );
+
+  const wardId = isGuardianViewingWard ? guardianStatus!.partnerId! : null;
+  const effectiveUserId = wardId || currentUser.id;
+
+  // Filter messages related to the effective user (current user or ward being overseen)
+  const myMessages = messages.filter(m => m.senderId === effectiveUserId || m.receiverId === effectiveUserId);
 
   useEffect(() => {
     const missingPartnerIds = Array.from(new Set(
-      myMessages.map(m => (m.senderId === currentUser.id ? m.receiverId : m.senderId))
+      myMessages.map(m => (m.senderId === effectiveUserId ? m.receiverId : m.senderId))
     )).filter(id => id && !profiles.some(p => p.id === id));
 
     missingPartnerIds.forEach(id => {
       fetchProfileById(id);
     });
-  }, [myMessages, currentUser.id, profiles, fetchProfileById]);
+  }, [myMessages, effectiveUserId, profiles, fetchProfileById]);
 
   // Group messages by partner with fallback so conversations are never lost
   const chatPartners = Array.from(new Set(myMessages.map(m => 
-    m.senderId === currentUser.id ? m.receiverId : m.senderId
+    m.senderId === effectiveUserId ? m.receiverId : m.senderId
   ))).map(partnerId => {
     const partner: UserProfile = profiles.find(p => p.id === partnerId) || createFallbackPartner(partnerId);
     const partnerMessages = myMessages.filter(m => 
-      (m.senderId === currentUser.id && m.receiverId === partnerId) || 
-      (m.senderId === partnerId && m.receiverId === currentUser.id)
+      (m.senderId === effectiveUserId && m.receiverId === partnerId) || 
+      (m.senderId === partnerId && m.receiverId === effectiveUserId)
     );
     const lastMessage = partnerMessages[partnerMessages.length - 1];
     const unreadCount = partnerMessages.filter(m => m.senderId === partnerId && !m.isRead).length;
@@ -153,8 +164,8 @@ export const InboxPage: React.FC<InboxPageProps> = ({
 
   // Active Chat Message history
   const activeChatMessages = myMessages.filter(m => 
-    (m.senderId === currentUser.id && m.receiverId === selectedChatUserId) || 
-    (m.senderId === selectedChatUserId && m.receiverId === currentUser.id)
+    (m.senderId === effectiveUserId && m.receiverId === selectedChatUserId) || 
+    (m.senderId === selectedChatUserId && m.receiverId === effectiveUserId)
   );
 
   const activeChatPartner: UserProfile | undefined = selectedChatUserId 
@@ -219,28 +230,47 @@ export const InboxPage: React.FC<InboxPageProps> = ({
               </span>
             </div>
 
+            {/* Guardian Oversight Banner */}
+            {isGuardianViewingWard && (
+              <div className="bg-emerald-50 border-b border-emerald-200/80 px-4 py-2.5 flex items-center gap-2 text-xs text-emerald-900 leading-snug">
+                <ShieldCheck className="w-5 h-5 text-emerald-700 flex-shrink-0" />
+                <span>
+                  <strong>وضع إشراف ولي الأمر:</strong> أنت تطّلع على محادثة ({guardianStatus?.partnerName || "الابن / الابنة"}) مع ({activeChatPartner.name}) كضمانة شرعية وأسرية لحفظ الحقوق وبارك الله في سعيكما.
+                </span>
+              </div>
+            )}
+
             {/* Marriage Journey Tracker: 6 defined stages with reminders & polite apology exit */}
             <MarriageJourneyTracker partner={activeChatPartner} />
 
             {/* Chat Body messages list */}
             <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-slate-50/50">
               {activeChatMessages.map(msg => {
-                const isMe = msg.senderId === currentUser.id;
+                const isFromWardSide = msg.senderId === effectiveUserId;
+                const senderDisplayName = isFromWardSide 
+                  ? (isGuardianViewingWard ? (guardianStatus?.partnerName || "من تتولى أمره") : "أنا")
+                  : activeChatPartner.name;
+
                 return (
                   <div 
                     key={msg.id}
-                    className={`flex ${isMe ? "justify-start" : "justify-end"}`}
+                    className={`flex flex-col ${isFromWardSide ? "items-start" : "items-end"}`}
                   >
+                    {isGuardianViewingWard && (
+                      <span className="text-[10px] text-slate-400 font-bold px-1 mb-0.5">
+                        {senderDisplayName}
+                      </span>
+                    )}
                     <div className={`p-3.5 rounded-2xl max-w-[80%] text-xs leading-relaxed shadow-sm ${
-                      isMe 
+                      isFromWardSide 
                         ? "bg-emerald-600 text-white rounded-br-none" 
                         : "bg-white text-slate-700 border border-slate-100 rounded-bl-none"
                     }`}>
                       <p>{msg.content}</p>
                       
-                      <div className={`flex items-center gap-1.5 mt-1 justify-end text-[9px] ${isMe ? "text-emerald-200" : "text-slate-400"}`}>
+                      <div className={`flex items-center gap-1.5 mt-1 justify-end text-[9px] ${isFromWardSide ? "text-emerald-200" : "text-slate-400"}`}>
                         <span>{new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-                        {isMe && <CheckCheck className="w-3.5 h-3.5" />}
+                        {isFromWardSide && <CheckCheck className="w-3.5 h-3.5" />}
                       </div>
                     </div>
                   </div>
@@ -250,7 +280,7 @@ export const InboxPage: React.FC<InboxPageProps> = ({
             </div>
 
             {/* Premium Lock safeguard for Messaging */}
-            {!currentUser.isPremium && (
+            {!currentUser.isPremium && !isGuardianViewingWard && (
               <div className="absolute inset-0 bg-white/95 backdrop-blur-sm flex flex-col justify-center items-center text-center p-6 space-y-4">
                 <div className="p-3 bg-amber-50 text-amber-500 rounded-full">
                   <Lock className="w-8 h-8 fill-amber-100" />
@@ -271,8 +301,13 @@ export const InboxPage: React.FC<InboxPageProps> = ({
               </div>
             )}
 
-            {/* Active Chat Input footer form */}
-            {currentUser.isPremium && (
+            {/* Active Chat Input footer form or Guardian Read-only bar */}
+            {isGuardianViewingWard ? (
+              <div className="p-3 border-t border-slate-100 bg-emerald-50/70 flex items-center justify-center gap-2 text-xs font-bold text-emerald-800">
+                <ShieldCheck className="w-4 h-4 text-emerald-600" />
+                <span>جلسة قراءة ومتابعة لولي الأمر (المحادثة مسجلة وتحت الإشراف الشرعي)</span>
+              </div>
+            ) : currentUser.isPremium ? (
               <form onSubmit={handleSendMessage} className="p-3 border-t border-slate-100 bg-white flex gap-2">
                 <input 
                   type="text" 
@@ -288,7 +323,7 @@ export const InboxPage: React.FC<InboxPageProps> = ({
                   <Send className="w-4 h-4 rotate-180" />
                 </button>
               </form>
-            )}
+            ) : null}
 
           </div>
         ) : (

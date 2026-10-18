@@ -23,7 +23,7 @@ export const MarriageJourneyTracker: React.FC<MarriageJourneyTrackerProps> = ({
   partner,
   onSendMessage 
 }) => {
-  const { currentUser, sendMessage, ignoreProfile } = useApp();
+  const { currentUser, sendMessage, ignoreProfile, guardianStatus } = useApp();
   const { addToast } = useUIStore();
 
   if (!currentUser || !partner) return null;
@@ -41,9 +41,9 @@ export const MarriageJourneyTracker: React.FC<MarriageJourneyTrackerProps> = ({
   const [showEngagementModal, setShowEngagementModal] = useState(false);
 
   // حقول نموذج ولي الأمر
-  const [waliName, setWaliName] = useState("");
+  const [waliName, setWaliName] = useState(() => guardianStatus?.partnerName || "");
   const [waliPhone, setWaliPhone] = useState("");
-  const [waliRelation, setWaliRelation] = useState("الوالد");
+  const [waliRelation, setWaliRelation] = useState(() => guardianStatus?.relationship || "الوالد");
   const [waliBestTime, setWaliBestTime] = useState("مساءً بعد صلاة العشاء");
 
   // حقول الاعتذار
@@ -436,6 +436,18 @@ export const MarriageJourneyTracker: React.FC<MarriageJourneyTrackerProps> = ({
             <p className="text-xs text-slate-600 leading-relaxed bg-emerald-50/70 p-3 rounded-2xl border border-emerald-100">
               «البيوت تُؤتى من أبوابها». تزويد الخاطب برقم الولي يعزز الجدية ويحفظ كرامة الفتاة، وينقل التعارف لمرحلة التنسيق العائلي الرسمي.
             </p>
+
+            {guardianStatus?.hasLink && guardianStatus.status === "active" && (
+              <div className="bg-emerald-50/80 p-3 rounded-2xl border border-emerald-200 text-xs text-emerald-900 space-y-1">
+                <span className="font-extrabold flex items-center gap-1.5 text-emerald-800">
+                  <ShieldCheck className="w-4 h-4 text-emerald-600" />
+                  حسابك مرتبط بولي أمر مسجل في التطبيق:
+                </span>
+                <p className="text-[11px] text-emerald-700">
+                  {guardianStatus.partnerName} ({guardianStatus.relationship || "الوالد"}) - رقم العضوية: {guardianStatus.partnerMemberNumber}
+                </p>
+              </div>
+            )}
 
             <form onSubmit={handleSubmitWaliContact} className="space-y-3">
               <div>

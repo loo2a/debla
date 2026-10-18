@@ -6,7 +6,7 @@ import { getAvatarUrl } from "../lib/avatarUtils";
 import { motion, AnimatePresence } from "motion/react";
 import { 
   Home, Bell, User, Heart, EyeOff, Users, Award, 
-  Sparkles, Mail, Share2, LogOut, X, ShieldAlert 
+  Sparkles, Mail, Share2, LogOut, X, ShieldAlert, ShieldCheck 
 } from "lucide-react";
 
 interface SidebarProps {
@@ -41,6 +41,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
   const menuItems = [
     { id: "home", path: "/", label: "الرئيسية", icon: Home },
+    { 
+      id: "guardian", 
+      path: "/guardian", 
+      label: currentUser.accountRole?.startsWith("guardian_") ? "بوابة إشراف ولي الأمر" : "وضع الولي والأسرة", 
+      icon: ShieldCheck,
+      highlight: currentUser.accountRole?.startsWith("guardian_")
+    },
     { id: "notifications", path: "/inbox", label: "الإشعارات والبريد", icon: Bell, badge: unreadNotifications },
     { id: "profile", path: "/my-profile", label: "الملف الشخصي", icon: User },
     { id: "interests", path: "/interests", label: "قائمة الاهتمامات", icon: Heart },

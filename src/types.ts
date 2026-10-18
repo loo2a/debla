@@ -16,9 +16,28 @@ export enum HijabType {
   NONE = "غير محجبة"
 }
 
+export type AccountRole = "seeker_male" | "seeker_female" | "guardian_bride" | "guardian_groom";
+
+export interface GuardianLinkStatus {
+  hasLink: boolean;
+  isGuardian: boolean;
+  linkId?: string;
+  status?: "pending" | "active" | "revoked";
+  inviteCode?: string;
+  relationship?: string;
+  canViewChat?: boolean;
+  canApproveRequests?: boolean;
+  partnerId?: string;
+  partnerName?: string;
+  partnerMemberNumber?: string;
+  partnerGender?: Gender;
+  createdAt?: string;
+}
+
 export interface UserProfile {
   id: string; // auth.users UUID (internal)
   memberNumber: string; // Public member number e.g., "MEMBER-10042"
+  accountRole?: AccountRole;
   name: string;
   // Private fields: only present for the current user (and for admins)
   email?: string;

@@ -17,6 +17,8 @@ import {
 } from "../constants";
 import { MaritalStatus, Gender } from "../types";
 import { MyTrustVerificationManager } from "../components/MyTrustVerificationManager";
+import { WardGuardianSettings } from "../components/WardGuardianSettings";
+import { GuardianPortal } from "../components/GuardianPortal";
 
 export const MyProfilePage: React.FC = () => {
   const { 
@@ -265,6 +267,13 @@ export const MyProfilePage: React.FC = () => {
 
       {/* Multi-tier Trust & Verification Manager */}
       <MyTrustVerificationManager />
+
+      {/* Guardian and Family Oversight Mode (وضع الولي والأسرة) */}
+      {currentUser.accountRole?.startsWith("guardian_") ? (
+        <GuardianPortal />
+      ) : (
+        <WardGuardianSettings />
+      )}
 
       {/* Main Content: View Mode vs Edit Mode */}
       {!isEditing ? (

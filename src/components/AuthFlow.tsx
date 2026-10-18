@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useApp } from "../lib/store";
-import { Gender } from "../types";
+import { Gender, AccountRole } from "../types";
 import { StepEmailOtp } from "./auth/StepEmailOtp";
 import { StepCharter } from "./auth/StepCharter";
 import { StepGender } from "./auth/StepGender";
@@ -10,7 +10,7 @@ import { ProfileFormData } from "./auth/authSchemas";
 import { useUIStore } from "../stores/uiStore";
 
 export const AuthFlow: React.FC = () => {
-  const { currentUser, saveProfile } = useApp();
+  const { currentUser, saveProfile, acceptGuardianInvitation } = useApp();
   const { addToast } = useUIStore();
 
   const [step, setStep] = useState<"login" | "charter" | "gender" | "profile" | "avatar">(() => {
@@ -23,6 +23,11 @@ export const AuthFlow: React.FC = () => {
   const [selectedGender, setSelectedGender] = useState<Gender>(
     (currentUser?.gender as Gender) || Gender.MALE
   );
+  const [selectedRole, setSelectedRole] = useState<AccountRole>(
+    currentUser?.accountRole || "seeker_male"
+  );
+  const [pendingInviteCode, setPendingInviteCode] = useState<string | null>(null);
+
   const [formData, setFormData] = useState<ProfileFormData | null>(null);
   const [hobbies, setHobbies] = useState<string[]>([]);
   const [isFinishing, setIsFinishing] = useState(false);
@@ -42,8 +47,52 @@ export const AuthFlow: React.FC = () => {
     }
   }, [currentUser?.id, currentUser?.agreedToCharter, currentUser?.name]);
 
-  const handleGenderSelect = (gender: Gender) => {
+  const handleGenderSelect = (gender: Gender, accountRole: AccountRole, inviteCode?: string) => {
     setSelectedGender(gender);
+    setSelectedRole(accountRole);
+    if (inviteCode) {
+      setPendingInviteCode(inviteCode);
+    }
+
+    // تجهيز قيم أولية تناسب ولي الأمر لعدم إثقاله
+    if (accountRole.startsWith("guardian_")) {
+      const isBrideGuardian = accountRole === "guardian_bride";
+      setFormData({
+        name: currentUser?.name || (isBrideGuardian ? "أبو العروسة" : "والد العريس"),
+        mobile: currentUser?.mobile || "",
+        age: 52,
+        nationality: "مصر",
+        residence: "مصر",
+        profession: isBrideGuardian ? "ولي أمر العروسة" : "ولي أمر العريس",
+        education: "جامعي / عالي",
+        income: "من 7,000 إلى 15,000 جنيه أو ما يعادلها",
+        maritalStatus: "متزوج" as any,
+        hasChildren: true,
+        childrenCount: 2,
+        isSmoker: false,
+        height: 172,
+        weight: 75,
+        skinColor: "قمحي",
+        bodyBuild: "متوسط",
+        healthStatus: "بصحة جيدة جداً والحمد لله",
+        hasDisability: false,
+        chronicDiseases: "",
+        religiousCommitment: "ملتزم يسعى للأفضل",
+        prayers: "أصلي كل الصلوات في وقتها والحمد لله",
+        hasBeard: true,
+        hijabType: null,
+        qaImaStance: "موضوع خاضع للاتفاق الشرعي والمودة بين العائلتين",
+        mahrOpinion: "اليسر والبركة في المهر بما يتفق عليه الطرفان",
+        marriageTimeframe: "خلال سنة على الأكثر بإذن الله",
+        shariaVisionStance: "أؤيد الرؤية الشرعية بوجود محرم في أجواء عائلية محترمة",
+        aboutMe: isBrideGuardian 
+          ? "ولي أمر مسجل في منصة مودة ورحمة للإشراف الشرعي ومتابعة ومباركة خطوات التعارف لابنتي الكريمة وحفظ حقوقها."
+          : "ولي أمر مسجل في منصة مودة ورحمة للمتابعة والمباركة لخطوات التعارف الشرعي لابني الكريم وحسن التوفيق.",
+        partnerSpecs: "الحرص على تقوى الله تعالى وحسن الخلق والالتزام بالدين، والجدية التامة والتوافق الأسري المحترم.",
+      });
+      setHobbies(["القراءة", "التربية", "الأسرة"]);
+    }
+
     setStep("profile");
   };
 
@@ -58,6 +107,7 @@ export const AuthFlow: React.FC = () => {
     setIsFinishing(true);
 
     const res = await saveProfile({
+      accountRole: selectedRole,
       name: formData.name,
       mobile: formData.mobile,
       gender: selectedGender,
@@ -92,10 +142,21 @@ export const AuthFlow: React.FC = () => {
       avatar: avatarId,
     });
 
-    setIsFinishing(false);
     if (res.ok) {
-      addToast("مبارك! تم إعداد ملفك الشخصي بنجاح، مرحباً بك في مودة ورحمة.", "success");
+      // إذا كان ولي أمر وقام بإدخال كود الدعوة في البداية، نقوم بربطه مباشرة الآن
+      if (pendingInviteCode && selectedRole.startsWith("guardian_")) {
+        const linkRes = await acceptGuardianInvitation(pendingInviteCode);
+        if (linkRes.ok) {
+          addToast("تم ربط حسابك بمن تتولى أمره وتفعيل الإشراف الشرعي بنجاح!", "success");
+        } else {
+          addToast(`تم إنشاء حسابك، ولكن تعذر ربط رمز الدعوة: ${linkRes.error}`, "info");
+        }
+      } else {
+        addToast("مبارك! تم إعداد حسابك بنجاح، مرحباً بك في مودة ورحمة.", "success");
+      }
     }
+
+    setIsFinishing(false);
   };
 
   return (

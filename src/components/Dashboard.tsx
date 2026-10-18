@@ -7,9 +7,10 @@ import { calculateProfileScore } from "../lib/profileScore";
 import { motion } from "motion/react";
 import { 
   Menu, Sparkles, Heart, CheckCircle, Shield, 
-  Users, Eye, Award, ExternalLink, HelpCircle, AlertTriangle, ChevronLeft 
+  Users, Eye, Award, ExternalLink, HelpCircle, AlertTriangle, ChevronLeft, ShieldCheck 
 } from "lucide-react";
 import { CandidateSwipeCards } from "./CandidateSwipeCards";
+import { GuardianPortal } from "./GuardianPortal";
 
 interface DashboardProps {
   onOpenSidebar?: () => void;
@@ -22,10 +23,15 @@ export const Dashboard: React.FC<DashboardProps> = ({
   setActiveScreen,
   onSelectProfile
 }) => {
-  const { currentUser, profiles, successStories } = useApp();
+  const { currentUser, profiles, successStories, guardianStatus } = useApp();
   const navigate = useNavigate();
 
   if (!currentUser) return null;
+
+  // إذا كان الحساب لولي أمر، يتم عرض بوابة ولي الأمر مباشرة
+  if (currentUser.accountRole?.startsWith("guardian_") || guardianStatus?.isGuardian) {
+    return <GuardianPortal />;
+  }
 
   // Filter candidates of opposite gender
   const oppositeGender = currentUser.gender === Gender.MALE ? Gender.FEMALE : Gender.MALE;
@@ -167,6 +173,32 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
         {/* Swipe Cards: 5 for Free users, 20 for Premium users */}
         <CandidateSwipeCards onOpenProfile={handleSelectCandidate} />
+
+        {/* Guardian and Family Oversight Card */}
+        <div 
+          onClick={() => navigate("/guardian")}
+          className="bg-gradient-to-l from-emerald-50 to-teal-50 border border-emerald-200/80 rounded-2xl p-4 shadow-sm hover:border-emerald-300 transition cursor-pointer flex items-center justify-between group"
+        >
+          <div className="flex items-center gap-3">
+            <div className="w-11 h-11 rounded-xl bg-white text-emerald-700 border border-emerald-200 flex items-center justify-center text-xl shadow-xs shrink-0">
+              🛡️
+            </div>
+            <div className="space-y-0.5 text-right">
+              <div className="flex items-center gap-2">
+                <h4 className="font-extrabold text-xs text-slate-800 group-hover:text-emerald-800">
+                  وضع الولي والأسرة
+                </h4>
+                <span className="text-[10px] bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 rounded-full">
+                  ميزة تميز المنصة
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-500 leading-snug">
+                أشرك ولي أمرك في خطوات التعارف بكل خصوصية وأمان دون مشاركة كلمة مرورك.
+              </p>
+            </div>
+          </div>
+          <ChevronLeft className="w-4 h-4 text-emerald-600 group-hover:-translate-x-1 transition shrink-0 mr-2" />
+        </div>
 
         {/* Quick action banners */}
         <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
