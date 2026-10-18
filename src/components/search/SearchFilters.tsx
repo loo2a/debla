@@ -1,11 +1,12 @@
 import React from "react";
-import { SlidersHorizontal, ArrowUpDown, ChevronDown, ChevronUp } from "lucide-react";
+import { SlidersHorizontal, ArrowUpDown, ChevronDown, ChevronUp, Flame, CheckCircle2 } from "lucide-react";
 import {
   Nationalities, Countries, EducationLevels, IncomeLevels,
   SkinColors, BodyBuilds, ReligiousCommitmentLevels,
   PrayersCommitment, QaImaStances, MahrOpinions, MarriageTimeframes
 } from "../../constants";
 import { Gender, MaritalStatus, HijabType } from "../../types";
+import { RED_FLAG_OPTIONS } from "../CompatibilitySurveyModal";
 
 export interface SearchFilterState {
   nationality: string;
@@ -31,6 +32,7 @@ export interface SearchFilterState {
   qaIma: string;
   mahr: string;
   timeframe: string;
+  redFlags: string[];
 }
 
 interface SearchFiltersProps {
@@ -243,6 +245,53 @@ export const SearchFilters: React.FC<SearchFiltersProps> = ({
           </div>
         </div>
       )}
+
+      {/* Red Flags Exclusion Filters */}
+      <div className="pt-3 border-t border-slate-100 space-y-2">
+        <div className="flex items-center justify-between">
+          <label className="text-xs font-bold text-rose-800 flex items-center gap-1.5">
+            <Flame className="w-4 h-4 text-rose-600" />
+            <span>استبعاد الخطوط الحمراء (Red Flags) من نتائج البحث:</span>
+          </label>
+          {filter.redFlags && filter.redFlags.length > 0 && (
+            <button
+              type="button"
+              onClick={() => onChange((prev) => ({ ...prev, redFlags: [] }))}
+              className="text-[10px] text-slate-400 hover:text-slate-600 underline"
+            >
+              مسح تصفية الخطوط الحمراء
+            </button>
+          )}
+        </div>
+        <div className="flex flex-wrap gap-1.5">
+          {RED_FLAG_OPTIONS.map((flag) => {
+            const isSelected = filter.redFlags?.includes(flag);
+            return (
+              <button
+                type="button"
+                key={flag}
+                onClick={() => {
+                  onChange((prev) => {
+                    const currentFlags = prev.redFlags || [];
+                    const updated = isSelected
+                      ? currentFlags.filter((f) => f !== flag)
+                      : [...currentFlags, flag];
+                    return { ...prev, redFlags: updated };
+                  });
+                }}
+                className={`px-2.5 py-1 text-xs rounded-xl border transition flex items-center gap-1 ${
+                  isSelected
+                    ? "bg-rose-600 border-rose-600 text-white font-bold shadow-xs"
+                    : "bg-slate-50 border-slate-200 text-slate-600 hover:border-rose-300"
+                }`}
+              >
+                {isSelected && <CheckCircle2 className="w-3 h-3" />}
+                {flag}
+              </button>
+            );
+          })}
+        </div>
+      </div>
     </div>
   );
 };

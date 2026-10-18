@@ -7,7 +7,7 @@ import { getAvatarUrl } from "../lib/avatarUtils";
 import { 
   Shield, Users, Sparkles, Check, X, AlertTriangle, 
   Trash2, Award, ShieldCheck, Database, Copy, RefreshCw, CheckCircle2,
-  Smartphone, Camera, FileCheck2 
+  Smartphone, Camera, FileCheck2, Lock, FileText 
 } from "lucide-react";
 import { getUserVerificationTiers } from "../lib/verificationTiers";
 import { VerificationTierType } from "../types";
@@ -16,12 +16,14 @@ export const AdminPanel: React.FC = () => {
   const { 
     isAdmin, profiles, premiumRequests, interactions, successStories, dbError, isSupabaseLoading,
     adminApprovePremium, adminRejectPremium, adminVerifyUser, adminUpdateTierVerification,
-    adminDeleteUser, adminApproveStory, retryLoadData
+    adminDeleteUser, adminApproveStory, retryLoadData,
+    profileEditRequests, adminReviewProfileEditRequest
   } = useApp();
   const { addToast, showConfirm } = useUIStore();
 
-  const [activeTab, setActiveTab] = useState<"requests" | "users" | "reports" | "stories">("requests");
+  const [activeTab, setActiveTab] = useState<"requests" | "users" | "reports" | "stories" | "edit_requests">("requests");
   const [isRetrying, setIsRetrying] = useState(false);
+  const [rejectNotes, setRejectNotes] = useState<Record<string, string>>({});
 
   // Security Guard: Only admins can view this panel
   if (!isAdmin) {
@@ -32,6 +34,7 @@ export const AdminPanel: React.FC = () => {
   const verifiedProfiles = profiles.filter(p => p.name !== "");
   const reports = interactions.filter(i => i.type === "report");
   const pendingStories = successStories.filter(s => !s.isApproved);
+  const pendingEditRequests = profileEditRequests.filter(r => r.status === "pending");
 
   const handleRetrySync = async () => {
     setIsRetrying(true);
@@ -144,6 +147,18 @@ export const AdminPanel: React.FC = () => {
           >
             <Award className="w-3.5 h-3.5" />
             <span>القصص ({pendingStories.length})</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab("edit_requests")}
+            className={`flex-1 min-w-[70px] py-2 rounded-xl text-[10px] md:text-xs font-bold transition flex items-center justify-center gap-1 ${
+              activeTab === "edit_requests" 
+                ? "bg-rose-600 text-white" 
+                : "text-slate-500 hover:bg-slate-50"
+            }`}
+          >
+            <Lock className="w-3.5 h-3.5" />
+            <span>طلبات التعديل ({pendingEditRequests.length})</span>
           </button>
 
         </div>
@@ -401,6 +416,167 @@ export const AdminPanel: React.FC = () => {
                       <Check className="w-4 h-4" />
                       <span>اعتماد ونشر القصة للعامة</span>
                     </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Tab content 5: Profile Edit Requests */}
+        {activeTab === "edit_requests" && (
+          <div className="space-y-4">
+            <div>
+              <h3 className="font-bold text-slate-800 text-xs">طلبات تعديل البيانات الأساسية المقفلة</h3>
+              <p className="text-[11px] text-slate-500">
+                تدقيق طلبات تغيير (الاسم، السن، الجنس، الحالة الاجتماعية، والجنسية) لمنع التلاعب. عند القبول يتم تحديث ملف العضو تلقائياً.
+              </p>
+            </div>
+
+            {profileEditRequests.length === 0 ? (
+              <div className="bg-white rounded-2xl p-8 border border-slate-100 text-center text-slate-400 text-xs">
+                لا توجد أي طلبات لتعديل البيانات الأساسية حالياً.
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {profileEditRequests.map((req) => (
+                  <div
+                    key={req.id}
+                    className="bg-white rounded-2xl border border-slate-100 p-5 shadow-sm space-y-3"
+                  >
+                    <div className="flex justify-between items-start border-b border-slate-50 pb-2">
+                      <div>
+                        <h4 className="font-extrabold text-slate-800 text-xs flex items-center gap-1.5">
+                          <Lock className="w-3.5 h-3.5 text-amber-600" />
+                          <span>{req.userName || "مستخدم"}</span>
+                          {req.userMemberNumber && (
+                            <span className="text-[10px] text-slate-400 font-mono">
+                              ({req.userMemberNumber})
+                            </span>
+                          )}
+                        </h4>
+                        <span className="text-[10px] text-slate-400 font-mono">
+                          بتاريخ: {new Date(req.createdAt).toLocaleDateString("ar-EG")}
+                        </span>
+                      </div>
+                      <span
+                        className={`text-[10px] px-2.5 py-0.5 rounded-full font-bold ${
+                          req.status === "approved"
+                            ? "bg-emerald-100 text-emerald-800"
+                            : req.status === "rejected"
+                            ? "bg-rose-100 text-rose-800"
+                            : "bg-amber-100 text-amber-800"
+                        }`}
+                      >
+                        {req.status === "approved"
+                          ? "تمت الموافقة"
+                          : req.status === "rejected"
+                          ? "تم الرفض"
+                          : "قيد المراجعة"}
+                      </span>
+                    </div>
+
+                    {/* Requested Changes Details */}
+                    <div className="space-y-1.5">
+                      <span className="text-[10px] text-slate-400 font-bold block">
+                        التعديلات المطلوبة على البيانات الأساسية:
+                      </span>
+                      <div className="bg-amber-50/50 p-3 rounded-xl border border-amber-100/60 text-xs space-y-1">
+                        {Object.entries(req.requestedChanges).map(([key, val]) => (
+                          <div key={key} className="flex items-center gap-2">
+                            <span className="font-bold text-slate-700">
+                              {key === "name"
+                                ? "الاسم الكامل"
+                                : key === "gender"
+                                ? "النوع"
+                                : key === "age"
+                                ? "السن"
+                                : key === "maritalStatus"
+                                ? "الحالة الاجتماعية"
+                                : key === "nationality"
+                                ? "الجنسية"
+                                : key}
+                              :
+                            </span>
+                            <span className="text-amber-900 font-semibold">
+                              {key === "gender"
+                                ? val === Gender.MALE
+                                  ? "رجل (عريس)"
+                                  : "امرأة (عروسة)"
+                                : String(val)}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Justification Reason */}
+                    <div className="space-y-1">
+                      <span className="text-[10px] text-slate-400 font-bold block">
+                        سبب التعديل الموضح من العضو:
+                      </span>
+                      <p className="text-xs text-slate-600 bg-slate-50 p-3 rounded-xl border border-slate-100 italic">
+                        "{req.reason}"
+                      </p>
+                    </div>
+
+                    {/* Admin Actions if pending */}
+                    {req.status === "pending" ? (
+                      <div className="pt-2 border-t border-slate-50 space-y-2">
+                        <input
+                          type="text"
+                          placeholder="ملاحظات الإدارة (اختياري، مثلاً: تم التحقق من بطاقة الهوية)"
+                          value={rejectNotes[req.id] || ""}
+                          onChange={(e) =>
+                            setRejectNotes((prev) => ({ ...prev, [req.id]: e.target.value }))
+                          }
+                          className="w-full px-3 py-1.5 text-xs rounded-xl border border-slate-200 bg-white"
+                        />
+                        <div className="flex gap-2">
+                          <button
+                            onClick={async () => {
+                              const res = await adminReviewProfileEditRequest(
+                                req.id,
+                                "approved",
+                                rejectNotes[req.id]
+                              );
+                              if (res.ok) {
+                                addToast("تم اعتماد طلب التعديل وتحديث بيانات العضو في قاعدة البيانات بنجاح!", "success");
+                              } else {
+                                addToast(res.error || "فشل اعتماد الطلب", "error");
+                              }
+                            }}
+                            className="flex-1 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition flex items-center justify-center gap-1 shadow-xs"
+                          >
+                            <Check className="w-4 h-4" />
+                            <span>موافقة وتحديث البيانات فوراً</span>
+                          </button>
+                          <button
+                            onClick={async () => {
+                              const res = await adminReviewProfileEditRequest(
+                                req.id,
+                                "rejected",
+                                rejectNotes[req.id] || "لم يتم تقديم إثبات كافٍ"
+                              );
+                              if (res.ok) {
+                                addToast("تم رفض طلب التعديل وإشعار العضو بالملاحظة.", "info");
+                              } else {
+                                addToast(res.error || "فشل رفض الطلب", "error");
+                              }
+                            }}
+                            className="px-4 py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1"
+                          >
+                            <X className="w-4 h-4" />
+                            <span>رفض الطلب</span>
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="text-[10px] text-slate-400 pt-1">
+                        تمت المراجعة
+                        {req.adminNotes && ` • ملاحظة الإدارة: ${req.adminNotes}`}
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>

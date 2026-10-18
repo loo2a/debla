@@ -18,7 +18,7 @@ interface CandidateSwipeCardsProps {
 }
 
 export const CandidateSwipeCards: React.FC<CandidateSwipeCardsProps> = ({ onOpenProfile }) => {
-  const { currentUser, profiles, interactions, expressInterest, ignoreProfile, sendMessage } = useApp();
+  const { currentUser, profiles, interactions, expressInterest, ignoreProfile, sendMessage, mySurvey, allSurveys } = useApp();
   const { addToast } = useUIStore();
   const navigate = useNavigate();
 
@@ -56,8 +56,8 @@ export const CandidateSwipeCards: React.FC<CandidateSwipeCardsProps> = ({ onOpen
 
   // قائمة المرشحين المحسوبة
   const recommendedList = useMemo(() => {
-    return getRecommendedCandidates(currentUser, profiles, interactions, swipedTodayIds);
-  }, [currentUser, profiles, interactions, swipedTodayIds]);
+    return getRecommendedCandidates(currentUser, profiles, interactions, swipedTodayIds, mySurvey, allSurveys);
+  }, [currentUser, profiles, interactions, swipedTodayIds, mySurvey, allSurveys]);
 
   // حالة بطاقة السحب الحالية
   const [swipeDirection, setSwipeDirection] = useState<"left" | "right" | null>(null);

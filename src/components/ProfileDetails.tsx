@@ -2,12 +2,14 @@ import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useApp } from "../lib/store";
 import { useUIStore } from "../stores/uiStore";
-import { UserProfile, Gender, HijabType } from "../types";
+import { UserProfile, Gender, HijabType, CompatibilitySurvey } from "../types";
 import { getAvatarUrl } from "../lib/avatarUtils";
+import { calculateCompatibility } from "../lib/compatibility";
 import { 
   Heart, EyeOff, Ban, AlertTriangle, MessageSquare, 
   Bookmark, ArrowRight, ShieldCheck, Sparkles, MapPin, 
-  User, CheckCircle, HelpCircle, Lock, Check, Share2 
+  User, CheckCircle, HelpCircle, Lock, Check, Share2,
+  Flame, CheckCircle2
 } from "lucide-react";
 import { TrustVerificationBadges } from "./TrustVerificationBadges";
 
@@ -30,7 +32,8 @@ export const ProfileDetails: React.FC<ProfileDetailsProps> = ({
 
   const { 
     currentUser, profiles, expressInterest, acceptInterest, ignoreProfile, 
-    blockProfile, reportProfile, interactions, recordProfileView 
+    blockProfile, reportProfile, interactions, recordProfileView,
+    mySurvey, allSurveys, fetchCompatibilitySurvey
   } = useApp();
   const { addToast, showConfirm, triggerReviewPrompt } = useUIStore();
 
@@ -40,6 +43,23 @@ export const ProfileDetails: React.FC<ProfileDetailsProps> = ({
   const [isSaved, setIsSaved] = useState(false);
 
   const profile = profiles.find(p => p.id === userId);
+
+  const [fetchedSurvey, setFetchedSurvey] = useState<CompatibilitySurvey | null>(null);
+
+  useEffect(() => {
+    if (profile?.id) {
+      if (allSurveys.has(profile.id)) {
+        setFetchedSurvey(allSurveys.get(profile.id)!);
+      } else {
+        void fetchCompatibilitySurvey(profile.id).then(s => setFetchedSurvey(s));
+      }
+    }
+  }, [profile?.id, allSurveys, fetchCompatibilitySurvey]);
+
+  const targetSurvey = allSurveys.get(profile?.id || "") || fetchedSurvey;
+  const compatibilityScore = (currentUser && profile)
+    ? calculateCompatibility(currentUser, profile, mySurvey, targetSurvey)
+    : null;
 
   useEffect(() => {
     if (profile?.id) {
@@ -256,7 +276,13 @@ export const ProfileDetails: React.FC<ProfileDetailsProps> = ({
               </div>
             </div>
 
-            <div className="flex gap-2">
+            <div className="flex flex-wrap justify-center items-center gap-2">
+              {compatibilityScore !== null && (
+                <span className="bg-gradient-to-r from-rose-500 to-amber-500 text-white text-xs px-3 py-1 rounded-full font-bold shadow-xs flex items-center gap-1">
+                  <Sparkles className="w-3.5 h-3.5 fill-white" />
+                  نسبة التوافق {compatibilityScore}%
+                </span>
+              )}
               <span className="bg-emerald-50 text-emerald-800 text-xs px-3 py-1 rounded-full font-semibold">
                 {profile.religiousCommitment}
               </span>
@@ -355,6 +381,89 @@ export const ProfileDetails: React.FC<ProfileDetailsProps> = ({
             <span className="text-[10px] font-bold">{isSaved ? "تم الحفظ" : "حفظ"}</span>
           </button>
         </div>
+
+        {/* Public Compatibility Survey & Red Flags Card */}
+        {targetSurvey && targetSurvey.isPublicInProfile && (
+          <div className="bg-white rounded-3xl border border-rose-100 p-6 shadow-sm space-y-4">
+            <div className="flex items-center gap-2 border-r-4 border-rose-500 pr-2">
+              <Sparkles className="w-5 h-5 text-rose-500" />
+              <h4 className="font-extrabold text-slate-800 text-sm">
+                استبيان التوافق والخطوط الحمراء للشريك
+              </h4>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+              {targetSurvey.leisureStyle && (
+                <div className="bg-rose-50/50 p-3 rounded-xl border border-rose-100/60">
+                  <span className="text-[10px] text-rose-600 block font-semibold">نمط قضاء الإجازة</span>
+                  <span className="font-bold text-slate-800">{targetSurvey.leisureStyle}</span>
+                </div>
+              )}
+              {targetSurvey.conflictStyle && (
+                <div className="bg-amber-50/50 p-3 rounded-xl border border-amber-100/60">
+                  <span className="text-[10px] text-amber-600 block font-semibold">التعامل مع الخلافات</span>
+                  <span className="font-bold text-slate-800">{targetSurvey.conflictStyle}</span>
+                </div>
+              )}
+              {targetSurvey.financialView && (
+                <div className="bg-emerald-50/50 p-3 rounded-xl border border-emerald-100/60">
+                  <span className="text-[10px] text-emerald-600 block font-semibold">الرؤية المالية للبيت</span>
+                  <span className="font-bold text-slate-800">{targetSurvey.financialView}</span>
+                </div>
+              )}
+              {targetSurvey.privacyBoundary && (
+                <div className="bg-purple-50/50 p-3 rounded-xl border border-purple-100/60">
+                  <span className="text-[10px] text-purple-600 block font-semibold">الخصوصية وحدود الأهل</span>
+                  <span className="font-bold text-slate-800">{targetSurvey.privacyBoundary}</span>
+                </div>
+              )}
+              {targetSurvey.lifePriority && (
+                <div className="bg-blue-50/50 p-3 rounded-xl border border-blue-100/60 sm:col-span-2">
+                  <span className="text-[10px] text-blue-600 block font-semibold">الهدف والأولوية في الزواج</span>
+                  <span className="font-bold text-slate-800">{targetSurvey.lifePriority}</span>
+                </div>
+              )}
+            </div>
+
+            {targetSurvey.redFlags && targetSurvey.redFlags.length > 0 && (
+              <div className="pt-2 border-t border-rose-100/80 space-y-2">
+                <span className="text-xs font-bold text-rose-800 flex items-center gap-1.5">
+                  <Flame className="w-4 h-4 text-rose-600" />
+                  خطوط حمراء يرفضها العضو تماماً (Red Flags):
+                </span>
+                <div className="flex flex-wrap gap-2">
+                  {targetSurvey.redFlags.map((flag: string) => (
+                    <span
+                      key={flag}
+                      className="px-2.5 py-1 rounded-lg bg-rose-100 text-rose-800 font-bold text-xs"
+                    >
+                      ⛔ {flag}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {targetSurvey.flexiblePoints && targetSurvey.flexiblePoints.length > 0 && (
+              <div className="pt-2 border-t border-slate-100 space-y-2">
+                <span className="text-xs font-bold text-emerald-800 flex items-center gap-1.5">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                  نقاط يتقبل فيها العضو المرونة والتفاهم:
+                </span>
+                <div className="flex flex-wrap gap-2">
+                  {targetSurvey.flexiblePoints.map((pt: string) => (
+                    <span
+                      key={pt}
+                      className="px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-800 border border-emerald-200 text-xs font-medium"
+                    >
+                      ✓ {pt}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Section 1: Speak about yourself & Partner specs (Min 140 chars validated) */}
         <div className="bg-white rounded-3xl border border-slate-100 p-6 shadow-sm space-y-6">

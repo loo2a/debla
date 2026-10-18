@@ -1,10 +1,16 @@
-import { UserProfile, Gender, Interaction } from "../types";
+import { UserProfile, Gender, Interaction, CompatibilitySurvey } from "../types";
 
 /**
- * دالة حساب نسبة التوافق الشرعي والموضوعي بين عضوين (من 65% إلى 98%)
- * معتمدة على بلد الإقامة، الجنسية، الالتزام الديني، الصلاة، التوافق العمري، والآراء الزواجية
+ * دالة حساب نسبة التوافق الشرعي والموضوعي بين عضوين
+ * معتمدة على بلد الإقامة، الجنسية، الالتزام الديني، الصلاة، التوافق العمري، الآراء الزواجية،
+ * بالإضافة لنتائج استبيان التوافق الذكي وفحص الخطوط الحمراء (Red Flags).
  */
-export function calculateCompatibility(me: UserProfile, other: UserProfile): number {
+export function calculateCompatibility(
+  me: UserProfile,
+  other: UserProfile,
+  mySurvey?: CompatibilitySurvey | null,
+  otherSurvey?: CompatibilitySurvey | null
+): number {
   if (!me || !other) return 70;
 
   let score = 55;
@@ -75,8 +81,52 @@ export function calculateCompatibility(me: UserProfile, other: UserProfile): num
     score += 5;
   }
 
-  // ضمان ألا تزيد النسبة عن 98% أو تقل عن 65% للواقعية
-  return Math.min(98, Math.max(65, score));
+  // 8. التوافق في استبيان الشخصية ونمط الحياة (إذا تم ملؤه)
+  if (mySurvey && otherSurvey) {
+    if (mySurvey.leisureStyle && otherSurvey.leisureStyle && mySurvey.leisureStyle === otherSurvey.leisureStyle) {
+      score += 4;
+    }
+    if (mySurvey.conflictStyle && otherSurvey.conflictStyle && mySurvey.conflictStyle === otherSurvey.conflictStyle) {
+      score += 4;
+    }
+    if (mySurvey.financialView && otherSurvey.financialView && mySurvey.financialView === otherSurvey.financialView) {
+      score += 5;
+    }
+    if (mySurvey.privacyBoundary && otherSurvey.privacyBoundary && mySurvey.privacyBoundary === otherSurvey.privacyBoundary) {
+      score += 4;
+    }
+    if (mySurvey.lifePriority && otherSurvey.lifePriority && mySurvey.lifePriority === otherSurvey.lifePriority) {
+      score += 4;
+    }
+  }
+
+  // 9. فحص الخطوط الحمراء (Red Flags) للطرفين
+  if (mySurvey?.redFlags && mySurvey.redFlags.length > 0) {
+    if (mySurvey.redFlags.includes("التدخين") && other.isSmoker) {
+      score -= 25;
+    }
+    if (mySurvey.redFlags.includes("التهاون في الصلاة") && other.prayers && (other.prayers.includes("أحياناً") || other.prayers.includes("منقطع") || other.prayers.includes("لا أصلي"))) {
+      score -= 25;
+    }
+    if (mySurvey.redFlags.includes("قلة الالتزام الديني") && other.religiousCommitment && other.religiousCommitment.includes("غير")) {
+      score -= 20;
+    }
+  }
+
+  if (otherSurvey?.redFlags && otherSurvey.redFlags.length > 0) {
+    if (otherSurvey.redFlags.includes("التدخين") && me.isSmoker) {
+      score -= 25;
+    }
+    if (otherSurvey.redFlags.includes("التهاون في الصلاة") && me.prayers && (me.prayers.includes("أحياناً") || me.prayers.includes("منقطع") || me.prayers.includes("لا أصلي"))) {
+      score -= 25;
+    }
+    if (otherSurvey.redFlags.includes("قلة الالتزام الديني") && me.religiousCommitment && me.religiousCommitment.includes("غير")) {
+      score -= 20;
+    }
+  }
+
+  // ضمان ألا تزيد النسبة عن 98% أو تقل عن 40% (في حال وجود خطوط حمراء)
+  return Math.min(98, Math.max(40, score));
 }
 
 export interface RecommendedCandidate {
@@ -85,13 +135,15 @@ export interface RecommendedCandidate {
 }
 
 /**
- * تصفية وترتيب المرشحين من الجنس الآخر وفق التوافق وحالة الاشتراك (5 للمجاني، 20 للمميز)
+ * تصفية وترتيب المرشحين من الجنس الآخر وفق التوافق والاستبيان وحالة الاشتراك (5 للمجاني، 20 للمميز)
  */
 export function getRecommendedCandidates(
   currentUser: UserProfile,
   allProfiles: UserProfile[],
   interactions: Interaction[],
-  swipedIds: string[]
+  swipedIds: string[],
+  mySurvey?: CompatibilitySurvey | null,
+  surveysMap?: Map<string, CompatibilitySurvey>
 ): RecommendedCandidate[] {
   if (!currentUser) return [];
 
@@ -119,11 +171,14 @@ export function getRecommendedCandidates(
     return true;
   });
 
-  // حساب درجة التوافق وترتيبهم تنازلياً
-  const scored: RecommendedCandidate[] = eligible.map((p) => ({
-    profile: p,
-    compatibilityScore: calculateCompatibility(currentUser, p),
-  }));
+  // حساب درجة التوافق وترتيبهم تنازلياً مع إدخال الاستبيانات
+  const scored: RecommendedCandidate[] = eligible.map((p) => {
+    const otherSurvey = surveysMap?.get(p.id) || null;
+    return {
+      profile: p,
+      compatibilityScore: calculateCompatibility(currentUser, p, mySurvey, otherSurvey),
+    };
+  });
 
   scored.sort((a, b) => b.compatibilityScore - a.compatibilityScore);
 

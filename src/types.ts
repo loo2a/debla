@@ -169,6 +169,34 @@ export interface PremiumSubscriptionRequest {
   timestamp: string;
 }
 
+export interface CompatibilitySurvey {
+  id?: string;
+  userId: string;
+  leisureStyle: string;
+  conflictStyle: string;
+  financialView: string;
+  privacyBoundary: string;
+  lifePriority: string;
+  redFlags: string[];
+  flexiblePoints: string[];
+  isPublicInProfile: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface ProfileEditRequest {
+  id: string;
+  userId: string;
+  userName?: string;
+  userMemberNumber?: string;
+  requestedChanges: Record<string, any>;
+  reason: string;
+  status: "pending" | "approved" | "rejected";
+  adminNotes?: string;
+  createdAt: string;
+  reviewedAt?: string;
+}
+
 export interface SearchProfilesFilter {
   gender?: Gender;
   minAge?: number;
@@ -178,6 +206,7 @@ export interface SearchProfilesFilter {
   maritalStatus?: string;
   religiousCommitment?: string;
   education?: string;
+  redFlags?: string[];
   prayers?: string;
   smoking?: boolean;
   minHeight?: number;

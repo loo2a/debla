@@ -3,7 +3,7 @@ import { useApp } from "../lib/store";
 import { useUIStore } from "../stores/uiStore";
 import { 
   Sparkles, EyeOff, Edit, ShieldCheck, Trash2, AlertTriangle, 
-  User, Check, X, Camera 
+  User, Check, X, Camera, Lock, Flame, CheckCircle2 
 } from "lucide-react";
 import { Button } from "../components/ui/Button";
 import { Card } from "../components/ui/Card";
@@ -19,16 +19,21 @@ import { MaritalStatus, Gender } from "../types";
 import { MyTrustVerificationManager } from "../components/MyTrustVerificationManager";
 import { WardGuardianSettings } from "../components/WardGuardianSettings";
 import { GuardianPortal } from "../components/GuardianPortal";
+import { CompatibilitySurveyModal } from "../components/CompatibilitySurveyModal";
+import { ProfileEditRequestModal } from "../components/ProfileEditRequestModal";
 
 export const MyProfilePage: React.FC = () => {
   const { 
     currentUser, updateProfile, updateAvatar, uploadCustomImage, 
-    updatePhotoPrivacy, toggleIncognitoMode, deleteMyAccount 
+    updatePhotoPrivacy, toggleIncognitoMode, deleteMyAccount,
+    mySurvey
   } = useApp();
   const { addToast, showConfirm } = useUIStore();
 
   const [isEditing, setIsEditing] = useState(false);
   const [showAvatarModal, setShowAvatarModal] = useState(false);
+  const [showSurveyModal, setShowSurveyModal] = useState(false);
+  const [showEditRequestModal, setShowEditRequestModal] = useState(false);
 
   // Form Fields State
   const [editProfession, setEditProfession] = useState(currentUser?.profession || "");
@@ -85,10 +90,10 @@ export const MyProfilePage: React.FC = () => {
     const res = await updateProfile({
       profession: editProfession.trim(),
       residence: editResidence,
-      nationality: editNationality,
+      nationality: currentUser.nationality,
       education: editEducation,
       income: editIncome,
-      maritalStatus: editMaritalStatus as MaritalStatus,
+      maritalStatus: currentUser.maritalStatus,
       religiousCommitment: editReligiousCommitment,
       prayers: editPrayers,
       qaImaStance: editQaImaStance,
@@ -278,6 +283,167 @@ export const MyProfilePage: React.FC = () => {
       {/* Main Content: View Mode vs Edit Mode */}
       {!isEditing ? (
         <div className="space-y-4">
+          {/* Protected Core Identity Card (Locked to prevent tampering) */}
+          <Card className="border border-amber-200/80 bg-gradient-to-br from-amber-50/40 via-white to-amber-50/20 p-4 space-y-3">
+            <div className="flex justify-between items-center pb-2 border-b border-amber-100">
+              <div className="flex items-center gap-2">
+                <div className="p-1.5 rounded-lg bg-amber-100 text-amber-800">
+                  <Lock className="w-4 h-4" />
+                </div>
+                <div>
+                  <h4 className="font-bold text-slate-800 text-xs">البيانات الأساسية والهوية</h4>
+                  <p className="text-[10px] text-amber-700/80">مقفلة لمنع التلاعب • يتطلب تعديلها تدقيق الإدارة</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowEditRequestModal(true)}
+                className="text-[11px] font-bold text-amber-800 hover:text-amber-900 bg-amber-100/80 hover:bg-amber-200/80 px-2.5 py-1 rounded-lg transition flex items-center gap-1 shadow-2xs"
+              >
+                <Lock className="w-3 h-3" />
+                طلب تعديل رسمي
+              </button>
+            </div>
+
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs">
+              <div className="bg-white/80 p-2.5 rounded-xl border border-amber-100/70">
+                <span className="text-[9px] text-slate-400 block">الاسم المسجل</span>
+                <span className="font-bold text-slate-800">{currentUser.name}</span>
+              </div>
+              <div className="bg-white/80 p-2.5 rounded-xl border border-amber-100/70">
+                <span className="text-[9px] text-slate-400 block">النوع / الجنس</span>
+                <span className="font-bold text-slate-800">
+                  {currentUser.gender === Gender.MALE ? "رجل (عريس)" : "امرأة (عروسة)"}
+                </span>
+              </div>
+              <div className="bg-white/80 p-2.5 rounded-xl border border-amber-100/70">
+                <span className="text-[9px] text-slate-400 block">السن</span>
+                <span className="font-bold text-slate-800">{currentUser.age} سنة</span>
+              </div>
+              <div className="bg-white/80 p-2.5 rounded-xl border border-amber-100/70">
+                <span className="text-[9px] text-slate-400 block">الحالة الاجتماعية</span>
+                <span className="font-bold text-slate-800">{currentUser.maritalStatus}</span>
+              </div>
+              <div className="bg-white/80 p-2.5 rounded-xl border border-amber-100/70">
+                <span className="text-[9px] text-slate-400 block">الجنسية</span>
+                <span className="font-bold text-slate-800">{currentUser.nationality}</span>
+              </div>
+              <div className="bg-white/80 p-2.5 rounded-xl border border-amber-100/70">
+                <span className="text-[9px] text-slate-400 block">رقم العضوية</span>
+                <span className="font-mono font-bold text-emerald-700">{currentUser.memberNumber}</span>
+              </div>
+            </div>
+          </Card>
+
+          {/* Compatibility Survey & Red Flags Card */}
+          <Card className="border border-rose-200/80 bg-gradient-to-br from-rose-50/40 via-white to-orange-50/20 p-4 space-y-3">
+            <div className="flex justify-between items-center pb-2 border-b border-rose-100">
+              <div className="flex items-center gap-2">
+                <div className="p-1.5 rounded-lg bg-rose-100 text-rose-700">
+                  <Sparkles className="w-4 h-4" />
+                </div>
+                <div>
+                  <h4 className="font-bold text-slate-800 text-xs">استبيان التوافق والخطوط الحمراء</h4>
+                  <p className="text-[10px] text-slate-500">
+                    {mySurvey ? "مكتمل • يدخل في ترشيحات الشريك والتوافق" : "غير مكتمل بعد"}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowSurveyModal(true)}
+                className="text-[11px] font-bold text-rose-700 hover:text-rose-800 bg-rose-100/80 hover:bg-rose-200/80 px-2.5 py-1 rounded-lg transition flex items-center gap-1 shadow-2xs"
+              >
+                <Sparkles className="w-3 h-3" />
+                {mySurvey ? "تعديل الاستبيان" : "بدء الاستبيان الآن"}
+              </button>
+            </div>
+
+            {mySurvey ? (
+              <div className="space-y-2.5 text-xs">
+                <div className="flex flex-wrap gap-1.5">
+                  {mySurvey.leisureStyle && (
+                    <span className="px-2 py-0.5 rounded-lg bg-rose-50 text-rose-700 border border-rose-200 text-[11px]">
+                      🏖️ {mySurvey.leisureStyle}
+                    </span>
+                  )}
+                  {mySurvey.conflictStyle && (
+                    <span className="px-2 py-0.5 rounded-lg bg-amber-50 text-amber-700 border border-amber-200 text-[11px]">
+                      🤝 {mySurvey.conflictStyle}
+                    </span>
+                  )}
+                  {mySurvey.financialView && (
+                    <span className="px-2 py-0.5 rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-200 text-[11px]">
+                      💼 {mySurvey.financialView}
+                    </span>
+                  )}
+                  {mySurvey.lifePriority && (
+                    <span className="px-2 py-0.5 rounded-lg bg-blue-50 text-blue-700 border border-blue-200 text-[11px]">
+                      🎯 {mySurvey.lifePriority}
+                    </span>
+                  )}
+                </div>
+
+                {mySurvey.redFlags && mySurvey.redFlags.length > 0 && (
+                  <div className="pt-1.5 border-t border-rose-100/80 space-y-1">
+                    <span className="text-[10px] font-bold text-rose-800 flex items-center gap-1">
+                      <Flame className="w-3 h-3 text-rose-600" />
+                      الخطوط الحمراء (Red Flags):
+                    </span>
+                    <div className="flex flex-wrap gap-1.5">
+                      {mySurvey.redFlags.map((flag) => (
+                        <span
+                          key={flag}
+                          className="px-2 py-0.5 rounded-md bg-rose-100/80 text-rose-800 font-medium text-[10px]"
+                        >
+                          ⛔ {flag}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {mySurvey.flexiblePoints && mySurvey.flexiblePoints.length > 0 && (
+                  <div className="space-y-1">
+                    <span className="text-[10px] font-bold text-emerald-800 flex items-center gap-1">
+                      <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                      نقاط المرونة والتفاهم:
+                    </span>
+                    <div className="flex flex-wrap gap-1.5">
+                      {mySurvey.flexiblePoints.map((pt) => (
+                        <span
+                          key={pt}
+                          className="px-2 py-0.5 rounded-md bg-emerald-100/80 text-emerald-800 font-medium text-[10px]"
+                        >
+                          ✓ {pt}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                <div className="text-[10px] text-slate-400 pt-1">
+                  {mySurvey.isPublicInProfile
+                    ? "✓ معروض في ملفك الشخصي للأعضاء"
+                    : "🔒 مخفي عن الملف الشخصي (يستخدم في حساب التوافق فقط)"}
+                </div>
+              </div>
+            ) : (
+              <div className="text-center py-3 space-y-2">
+                <p className="text-xs text-slate-500">
+                  لم تقم بملء استبيان التوافق بعد. إجاباتك تساعدنا في اقتراح الشريك الأكثر ملاءمة لك وتجنب ما لا ترضاه.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setShowSurveyModal(true)}
+                  className="text-xs font-bold text-rose-700 bg-rose-50 hover:bg-rose-100 px-4 py-1.5 rounded-xl transition"
+                >
+                  ملء الاستبيان الآن (دقيقتان) ←
+                </button>
+              </div>
+            )}
+          </Card>
+
           <Card className="space-y-3">
             <div className="flex justify-between items-center">
               <h4 className="font-bold text-slate-800 text-xs">الفقرات التعريفية</h4>
@@ -389,15 +555,26 @@ export const MyProfilePage: React.FC = () => {
                 ))}
               </Select>
 
-              <Select
-                label="الجنسية"
-                value={editNationality}
-                onChange={(e) => setEditNationality(e.target.value)}
-              >
-                {Nationalities.map((n) => (
-                  <option key={n} value={n}>{n}</option>
-                ))}
-              </Select>
+              <div className="space-y-1">
+                <label className="block text-xs font-semibold text-slate-700">
+                  الجنسية <span className="text-[10px] text-amber-700 font-normal">(مقفل لمنع التلاعب 🔒)</span>
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    disabled
+                    value={currentUser.nationality}
+                    className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 bg-slate-100 text-slate-500 cursor-not-allowed"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowEditRequestModal(true)}
+                    className="px-2.5 py-1 text-[10px] font-bold bg-amber-100 text-amber-800 rounded-xl shrink-0 hover:bg-amber-200 transition"
+                  >
+                    طلب تعديل
+                  </button>
+                </div>
+              </div>
 
               <Select
                 label="المستوى التعليمي"
@@ -409,15 +586,26 @@ export const MyProfilePage: React.FC = () => {
                 ))}
               </Select>
 
-              <Select
-                label="الحالة الاجتماعية"
-                value={editMaritalStatus}
-                onChange={(e) => setEditMaritalStatus(e.target.value)}
-              >
-                <option value={MaritalStatus.SINGLE}>أعزب / عزباء</option>
-                <option value={MaritalStatus.DIVORCED}>مطلق / مطلقة</option>
-                <option value={MaritalStatus.WIDOWED}>أرمل / أرملة</option>
-              </Select>
+              <div className="space-y-1">
+                <label className="block text-xs font-semibold text-slate-700">
+                  الحالة الاجتماعية <span className="text-[10px] text-amber-700 font-normal">(مقفل لمنع التلاعب 🔒)</span>
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    disabled
+                    value={currentUser.maritalStatus}
+                    className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 bg-slate-100 text-slate-500 cursor-not-allowed"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowEditRequestModal(true)}
+                    className="px-2.5 py-1 text-[10px] font-bold bg-amber-100 text-amber-800 rounded-xl shrink-0 hover:bg-amber-200 transition"
+                  >
+                    طلب تعديل
+                  </button>
+                </div>
+              </div>
 
               <Select
                 label="نطاق الدخل الشهري"
@@ -609,6 +797,18 @@ export const MyProfilePage: React.FC = () => {
           حذف الحساب ومسح كافة البيانات نهائياً
         </Button>
       </Card>
+
+      {/* Compatibility Survey Modal */}
+      <CompatibilitySurveyModal
+        isOpen={showSurveyModal}
+        onClose={() => setShowSurveyModal(false)}
+      />
+
+      {/* Profile Edit Request Modal */}
+      <ProfileEditRequestModal
+        isOpen={showEditRequestModal}
+        onClose={() => setShowEditRequestModal(false)}
+      />
 
     </div>
   );

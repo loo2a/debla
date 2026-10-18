@@ -2,7 +2,8 @@ import React, { createContext, useContext, useState, useEffect, useRef, useCallb
 import {
   UserProfile, Message, Notification, SuccessStory, Interaction,
   PremiumSubscriptionRequest, SearchProfilesFilter, SearchProfilesResponse,
-  VerificationTierType, GuardianLinkStatus, AccountRole
+  VerificationTierType, GuardianLinkStatus, AccountRole,
+  CompatibilitySurvey, ProfileEditRequest
 } from "../types";
 import { supabase } from "./supabase";
 import { compressImage } from "./imageUtils";
@@ -89,6 +90,17 @@ interface AppContextType {
   acceptGuardianInvitation: (inviteCode: string) => Promise<ActionResult>;
   revokeGuardianLink: (linkId: string) => Promise<ActionResult>;
   updateGuardianPermissions: (linkId: string, canViewChat: boolean, canApproveRequests: boolean) => Promise<ActionResult>;
+
+  // Compatibility Survey & Red Flags (استبيان التوافق والخطوط الحمراء)
+  mySurvey: CompatibilitySurvey | null;
+  allSurveys: Map<string, CompatibilitySurvey>;
+  saveCompatibilitySurvey: (survey: Omit<CompatibilitySurvey, "userId">) => Promise<ActionResult>;
+  fetchCompatibilitySurvey: (userId: string) => Promise<CompatibilitySurvey | null>;
+
+  // Locked Profile Edit Requests (قفل البيانات الأساسية وتدقيق طلبات التعديل)
+  profileEditRequests: ProfileEditRequest[];
+  submitProfileEditRequest: (requestedChanges: Record<string, any>, reason: string) => Promise<ActionResult>;
+  adminReviewProfileEditRequest: (requestId: string, action: "approved" | "rejected", adminNotes?: string) => Promise<ActionResult>;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -106,6 +118,10 @@ const LEGACY_STORAGE_KEYS = [
 const SERVER_MANAGED_KEYS = [
   "id", "memberNumber", "email", "mobile", "isMobileVerified", "agreedToCharter",
   "isPremium", "isVerified", "premiumExpiryDate", "joinDate", "viewsCount",
+] as const;
+
+export const LOCKED_IDENTITY_KEYS = [
+  "name", "gender", "age", "maritalStatus", "nationality", "accountRole"
 ] as const;
 
 const MAX_MESSAGE_LENGTH = 2000;
@@ -127,6 +143,9 @@ const toErrorMessage = (err: any): string => {
   if (/invalid_invite_code/i.test(message)) return "رمز الدعوة غير صالح أو انتهت صلاحيته.";
   if (/cannot_be_own_guardian/i.test(message)) return "لا يمكن ربط الحساب بنفس المستخدم كولي أمر.";
   if (/link_not_found/i.test(message)) return "لم يتم العثور على رابط الإشراف المطلوب.";
+  if (/reason_required/i.test(message)) return "يرجى توضيح سبب طلب تعديل البيانات الأساسية للإدارة.";
+  if (/already_reviewed/i.test(message)) return "تمت مراجعة والبت في هذا الطلب مسبقاً.";
+  if (/request_not_found/i.test(message)) return "لم يتم العثور على طلب التعديل المحدد.";
   if (/Failed to fetch|NetworkError/i.test(message)) return "تعذر الاتصال بالخادم. تحقق من الإنترنت وحاول مرة أخرى.";
   return err?.message || "حدث خطأ غير متوقع، حاول مرة أخرى.";
 };
@@ -214,6 +233,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [interactions, setInteractions] = useState<Interaction[]>([]);
   const [premiumRequests, setPremiumRequests] = useState<PremiumSubscriptionRequest[]>([]);
   const [guardianStatus, setGuardianStatus] = useState<GuardianLinkStatus | null>(null);
+  const [mySurvey, setMySurvey] = useState<CompatibilitySurvey | null>(null);
+  const [allSurveys, setAllSurveys] = useState<Map<string, CompatibilitySurvey>>(new Map());
+  const [profileEditRequests, setProfileEditRequests] = useState<ProfileEditRequest[]>([]);
 
   const [dbError, setDbError] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
@@ -249,6 +271,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setInteractions([]);
     setPremiumRequests([]);
     setGuardianStatus(null);
+    setMySurvey(null);
+    setAllSurveys(new Map());
+    setProfileEditRequests([]);
   }, []);
 
   const fetchGuardianStatus = useCallback(async (): Promise<GuardianLinkStatus | null> => {
@@ -297,7 +322,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     try {
       const [
         adminRes, profilesRes, privateRes, sensitiveRes, prefRes,
-        messagesRes, notificationsRes, interactionsRes, requestsRes, storiesRes
+        messagesRes, notificationsRes, interactionsRes, requestsRes, storiesRes,
+        surveysRes, editRequestsRes
       ] = await Promise.all([
         supabase.rpc("is_admin"),
         supabase.from("profiles").select("*").limit(100),
@@ -309,6 +335,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         supabase.from("interactions").select("*"),
         supabase.from("premium_requests").select("*").order("timestamp", { ascending: false }),
         supabase.from("success_stories").select("*").order("date", { ascending: false }),
+        Promise.resolve(supabase.from("compatibility_surveys").select("*")).catch(() => ({ data: [] } as any)),
+        Promise.resolve(supabase.from("profile_edit_requests").select("*").order("created_at", { ascending: false })).catch(() => ({ data: [] } as any)),
       ]);
 
       const firstError = [
@@ -368,6 +396,43 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         } as UserProfile;
         allProfiles.push(me);
       }
+
+      const surveysMap = new Map<string, CompatibilitySurvey>();
+      (surveysRes.data ?? []).forEach((row: any) => {
+        surveysMap.set(row.user_id, {
+          id: row.id,
+          userId: row.user_id,
+          leisureStyle: row.leisure_style || "",
+          conflictStyle: row.conflict_style || "",
+          financialView: row.financial_view || "",
+          privacyBoundary: row.privacy_boundary || "",
+          lifePriority: row.life_priority || "",
+          redFlags: row.red_flags || [],
+          flexiblePoints: row.flexible_points || [],
+          isPublicInProfile: row.is_public_in_profile ?? true,
+          createdAt: row.created_at,
+          updatedAt: row.updated_at,
+        });
+      });
+      setAllSurveys(surveysMap);
+      setMySurvey(surveysMap.get(userId) || null);
+
+      const parsedEditRequests: ProfileEditRequest[] = (editRequestsRes.data ?? []).map((row: any) => {
+        const userObj = allProfiles.find(p => p.id === row.user_id);
+        return {
+          id: row.id,
+          userId: row.user_id,
+          userName: userObj?.name || row.user_name || "مستخدم",
+          userMemberNumber: userObj?.memberNumber || row.user_member_number,
+          requestedChanges: row.requested_changes || {},
+          reason: row.reason || "",
+          status: row.status || "pending",
+          adminNotes: row.admin_notes,
+          createdAt: row.created_at,
+          reviewedAt: row.reviewed_at,
+        };
+      });
+      setProfileEditRequests(parsedEditRequests);
 
       setIsAdmin(adminRes.data === true);
       setProfiles(allProfiles);
@@ -658,6 +723,21 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const saveProfile = async (updatedData: Partial<UserProfile>): Promise<ActionResult> => {
     if (!currentUser) return { ok: false, error: "يجب تسجيل الدخول أولاً." };
 
+    // منع التعديل المباشر على البيانات الأساسية بعد تسجيلها أول مرة لمنع التلاعب
+    if (!isAdmin && currentUser.name && currentUser.name.trim() !== "") {
+      const changedLocked = LOCKED_IDENTITY_KEYS.filter(key => {
+        const val = updatedData[key as keyof UserProfile];
+        if (val === undefined) return false;
+        return String(val) !== String(currentUser[key as keyof UserProfile]);
+      });
+      if (changedLocked.length > 0) {
+        return {
+          ok: false,
+          error: "تعديل البيانات الأساسية (الاسم، السن، الجنس، الحالة الاجتماعية، الجنسية) مقفل لمنع التلاعب. يرجى تقديم طلب تعديل رسمي للإدارة للمراجعة.",
+        };
+      }
+    }
+
     const mobile = updatedData.mobile?.trim();
     const profileData: Record<string, unknown> = { ...updatedData };
     SERVER_MANAGED_KEYS.forEach(key => delete profileData[key]);
@@ -925,6 +1005,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       if (filter.isVerifiedOnly && !p.isVerified) return false;
       if (filter.hijabType && p.hijabType !== filter.hijabType) return false;
       if (filter.hasBeard !== undefined && p.hasBeard !== filter.hasBeard) return false;
+      if (filter.redFlags && filter.redFlags.length > 0) {
+        if (filter.redFlags.includes("التدخين") && p.isSmoker) return false;
+        if (filter.redFlags.includes("التهاون في الصلاة") && p.prayers && (p.prayers.includes("أحياناً") || p.prayers.includes("منقطع") || p.prayers.includes("لا أصلي"))) return false;
+        if (filter.redFlags.includes("قلة الالتزام الديني") && p.religiousCommitment && p.religiousCommitment.includes("غير")) return false;
+      }
       if (filter.searchQuery) {
         const q = filter.searchQuery.toLowerCase();
         const matches = p.name.toLowerCase().includes(q) ||
@@ -1249,6 +1334,141 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
+  // ------------------------------------------------------------------
+  // Compatibility Survey & Red Flags Actions
+  // ------------------------------------------------------------------
+  const saveCompatibilitySurvey = async (survey: Omit<CompatibilitySurvey, "userId">): Promise<ActionResult> => {
+    if (!currentUser) return { ok: false, error: "يجب تسجيل الدخول أولاً." };
+    try {
+      const { data, error } = await supabase.rpc("save_compatibility_survey_rpc", {
+        p_leisure_style: survey.leisureStyle || "",
+        p_conflict_style: survey.conflictStyle || "",
+        p_financial_view: survey.financialView || "",
+        p_privacy_boundary: survey.privacyBoundary || "",
+        p_life_priority: survey.lifePriority || "",
+        p_red_flags: survey.redFlags || [],
+        p_flexible_points: survey.flexiblePoints || [],
+        p_is_public: survey.isPublicInProfile ?? true,
+      });
+      if (error) return fail(error);
+      const updatedSurvey: CompatibilitySurvey = {
+        id: data?.id,
+        userId: currentUser.id,
+        ...survey,
+      };
+      setMySurvey(updatedSurvey);
+      setAllSurveys(prev => new Map(prev).set(currentUser.id, updatedSurvey));
+      return { ok: true };
+    } catch (err) {
+      return fail(err);
+    }
+  };
+
+  const fetchCompatibilitySurvey = async (userId: string): Promise<CompatibilitySurvey | null> => {
+    if (allSurveys.has(userId)) {
+      return allSurveys.get(userId)!;
+    }
+    try {
+      const { data, error } = await supabase
+        .from("compatibility_surveys")
+        .select("*")
+        .eq("user_id", userId)
+        .maybeSingle();
+      if (error || !data) return null;
+      const parsed: CompatibilitySurvey = {
+        id: data.id,
+        userId: data.user_id,
+        leisureStyle: data.leisure_style || "",
+        conflictStyle: data.conflict_style || "",
+        financialView: data.financial_view || "",
+        privacyBoundary: data.privacy_boundary || "",
+        lifePriority: data.life_priority || "",
+        redFlags: data.red_flags || [],
+        flexiblePoints: data.flexible_points || [],
+        isPublicInProfile: data.is_public_in_profile ?? true,
+        createdAt: data.created_at,
+        updatedAt: data.updated_at,
+      };
+      setAllSurveys(prev => new Map(prev).set(userId, parsed));
+      return parsed;
+    } catch {
+      return null;
+    }
+  };
+
+  // ------------------------------------------------------------------
+  // Locked Profile Edit Requests (طلبات تعديل البيانات الأساسية)
+  // ------------------------------------------------------------------
+  const submitProfileEditRequest = async (
+    requestedChanges: Record<string, any>,
+    reason: string
+  ): Promise<ActionResult> => {
+    if (!currentUser) return { ok: false, error: "يجب تسجيل الدخول أولاً." };
+    if (!reason.trim()) return { ok: false, error: "يرجى توضيح سبب طلب التعديل للإدارة." };
+    try {
+      const { data, error } = await supabase.rpc("submit_profile_edit_request_rpc", {
+        p_requested_changes: requestedChanges,
+        p_reason: reason.trim(),
+      });
+      if (error) return fail(error);
+      const newReq: ProfileEditRequest = {
+        id: data?.id || ("req-" + Date.now()),
+        userId: currentUser.id,
+        userName: currentUser.name,
+        userMemberNumber: currentUser.memberNumber,
+        requestedChanges,
+        reason: reason.trim(),
+        status: "pending",
+        createdAt: new Date().toISOString(),
+      };
+      setProfileEditRequests(prev => [newReq, ...prev]);
+      return { ok: true };
+    } catch (err) {
+      return fail(err);
+    }
+  };
+
+  const adminReviewProfileEditRequest = async (
+    requestId: string,
+    action: "approved" | "rejected",
+    adminNotes?: string
+  ): Promise<ActionResult> => {
+    if (!isAdmin) return { ok: false, error: "هذا الإجراء مخصص لإدارة المنصة فقط." };
+    try {
+      const { data, error } = await supabase.rpc("admin_review_profile_edit_request_rpc", {
+        p_request_id: requestId,
+        p_action: action,
+        p_admin_notes: adminNotes || null,
+      });
+      if (error) return fail(error);
+
+      setProfileEditRequests(prev => prev.map(req => req.id === requestId ? {
+        ...req,
+        status: action,
+        adminNotes,
+        reviewedAt: new Date().toISOString(),
+      } : req));
+
+      const targetReq = profileEditRequests.find(r => r.id === requestId);
+      if (targetReq && action === "approved") {
+        setProfiles(prev => prev.map(p => {
+          if (p.id === targetReq.userId) {
+            const updated = { ...p, ...targetReq.requestedChanges };
+            if (currentUser?.id === targetReq.userId) {
+              setCurrentUser(updated);
+            }
+            return updated;
+          }
+          return p;
+        }));
+      }
+
+      return { ok: true };
+    } catch (err) {
+      return fail(err);
+    }
+  };
+
   return (
     <AppContext.Provider value={{
       currentUser,
@@ -1260,6 +1480,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       interactions,
       premiumRequests,
       guardianStatus,
+      mySurvey,
+      allSurveys,
+      profileEditRequests,
       dbError,
       actionError,
       isAuthReady,
@@ -1312,7 +1535,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       createGuardianInvitation,
       acceptGuardianInvitation,
       revokeGuardianLink,
-      updateGuardianPermissions
+      updateGuardianPermissions,
+
+      // Compatibility Survey & Red Flags
+      saveCompatibilitySurvey,
+      fetchCompatibilitySurvey,
+
+      // Profile Edit Requests
+      submitProfileEditRequest,
+      adminReviewProfileEditRequest,
     }}>
       {children}
     </AppContext.Provider>

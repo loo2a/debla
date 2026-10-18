@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useApp } from "../lib/store";
 import { Gender } from "../types";
@@ -7,10 +7,11 @@ import { calculateProfileScore } from "../lib/profileScore";
 import { motion } from "motion/react";
 import { 
   Menu, Sparkles, Heart, CheckCircle, Shield, 
-  Users, Eye, Award, ExternalLink, HelpCircle, AlertTriangle, ChevronLeft, ShieldCheck 
+  Users, Eye, Award, ExternalLink, HelpCircle, AlertTriangle, ChevronLeft, ShieldCheck, X
 } from "lucide-react";
 import { CandidateSwipeCards } from "./CandidateSwipeCards";
 import { GuardianPortal } from "./GuardianPortal";
+import { CompatibilitySurveyModal } from "./CompatibilitySurveyModal";
 
 interface DashboardProps {
   onOpenSidebar?: () => void;
@@ -23,8 +24,11 @@ export const Dashboard: React.FC<DashboardProps> = ({
   setActiveScreen,
   onSelectProfile
 }) => {
-  const { currentUser, profiles, successStories, guardianStatus } = useApp();
+  const { currentUser, profiles, successStories, guardianStatus, mySurvey } = useApp();
   const navigate = useNavigate();
+
+  const [isSurveyModalOpen, setIsSurveyModalOpen] = useState(false);
+  const [isSurveyBannerDismissed, setIsSurveyBannerDismissed] = useState(false);
 
   if (!currentUser) return null;
 
@@ -109,6 +113,45 @@ export const Dashboard: React.FC<DashboardProps> = ({
             </div>
           </div>
         </div>
+
+        {/* Optional Compatibility Survey & Red Flags Banner */}
+        {!mySurvey && !isSurveyBannerDismissed && (
+          <div className="bg-gradient-to-r from-rose-50 via-amber-50 to-orange-50 border border-rose-200/80 rounded-2xl p-4 shadow-xs relative overflow-hidden text-right">
+            <button
+              onClick={() => setIsSurveyBannerDismissed(true)}
+              className="absolute left-3 top-3 p-1 text-gray-400 hover:text-gray-600 rounded-full transition"
+              title="إخفاء مؤقت"
+            >
+              <X className="w-4 h-4" />
+            </button>
+            <div className="flex items-start gap-3">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-rose-500 to-amber-500 text-white flex items-center justify-center shrink-0 shadow-sm shadow-rose-500/20">
+                <Sparkles className="w-5 h-5" />
+              </div>
+              <div className="space-y-1.5 pr-1">
+                <div className="flex items-center gap-2">
+                  <h4 className="font-extrabold text-xs sm:text-sm text-gray-900">
+                    استبيان التوافق الذكي والخطوط الحمراء
+                  </h4>
+                  <span className="text-[10px] bg-rose-100 text-rose-700 font-bold px-2 py-0.5 rounded-full">
+                    مستحسن
+                  </span>
+                </div>
+                <p className="text-[11px] sm:text-xs text-gray-600 leading-relaxed">
+                  أجب عن 5 سيناريوهات سريعة وحدد خطوطك الحمراء لتحسين ترشيحات الشريك واستبعاد ما لا يناسبك.
+                </p>
+                <div className="pt-1">
+                  <button
+                    onClick={() => setIsSurveyModalOpen(true)}
+                    className="bg-gradient-to-r from-rose-600 to-amber-600 hover:from-rose-700 hover:to-amber-700 text-white text-xs font-bold px-4 py-2 rounded-xl transition shadow-xs"
+                  >
+                    بدء الاستبيان السريع ←
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Profile Completion Meter */}
         {profileScore.score < 100 && (
@@ -382,6 +425,12 @@ export const Dashboard: React.FC<DashboardProps> = ({
             <li>بادر بإدخال الأهل في أقرب مرحلة ممكنة لتبني زواجاً سليماً ومباركاً.</li>
           </ul>
         </div>
+
+        {/* Compatibility Survey Modal */}
+        <CompatibilitySurveyModal
+          isOpen={isSurveyModalOpen}
+          onClose={() => setIsSurveyModalOpen(false)}
+        />
 
       </div>
     </div>
