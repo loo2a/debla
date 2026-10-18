@@ -235,6 +235,7 @@ const toProfile = (row: any, priv?: any, sensitive?: any, pref?: any): UserProfi
   qaImaStance: row.qa_ima_stance || row.qaImaStance,
   mahrOpinion: row.mahr_opinion || row.mahrOpinion,
   marriageTimeframe: row.marriage_timeframe || row.marriageTimeframe,
+  marriageReadiness: row.marriage_readiness || row.marriageReadiness || undefined,
   shariaVisionStance: row.sharia_vision_stance || row.shariaVisionStance,
   aboutMe: row.about_me || row.aboutMe || "",
   partnerSpecs: pref?.partner_specs || row.partner_specs || row.partnerSpecs || "",
@@ -818,6 +819,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (profileData.qaImaStance) profileData.qa_ima_stance = profileData.qaImaStance;
     if (profileData.mahrOpinion) profileData.mahr_opinion = profileData.mahrOpinion;
     if (profileData.marriageTimeframe) profileData.marriage_timeframe = profileData.marriageTimeframe;
+    if (profileData.marriageReadiness) profileData.marriage_readiness = profileData.marriageReadiness;
     if (profileData.shariaVisionStance) profileData.sharia_vision_stance = profileData.shariaVisionStance;
     if (profileData.aboutMe) profileData.about_me = profileData.aboutMe;
     if (profileData.partnerSpecs) profileData.partner_specs = profileData.partnerSpecs;

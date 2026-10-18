@@ -623,11 +623,16 @@ export const ProfileDetails: React.FC<ProfileDetailsProps> = ({
             </div>
 
             <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
-              <span className="text-[10px] text-slate-400 block font-semibold">الموعد المتوقع لإتمام الارتباط</span>
-              <span className="font-bold text-slate-800">{profile.marriageTimeframe}</span>
+              <span className="text-[10px] text-slate-400 block font-semibold">مدى الاستعداد والجاهزية للزواج</span>
+              <span className="font-bold text-emerald-800">{profile.marriageReadiness || "مستعد تماماً وجاهز من كافة الجوانب"}</span>
             </div>
 
             <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
+              <span className="text-[10px] text-slate-400 block font-semibold">الإطار الزمني الذي يناسبه للزواج</span>
+              <span className="font-bold text-slate-800">{profile.marriageTimeframe}</span>
+            </div>
+
+            <div className="bg-slate-50 p-3 rounded-xl border border-slate-100 sm:col-span-2">
               <span className="text-[10px] text-slate-400 block font-semibold">الموقف من الرؤية الشرعية</span>
               <span className="font-bold text-slate-800">{profile.shariaVisionStance}</span>
             </div>

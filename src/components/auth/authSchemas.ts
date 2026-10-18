@@ -39,6 +39,7 @@ export const profileFormSchema = z.object({
   qaImaStance: z.string().min(1, "يرجى تحديد الموقف من القايمة"),
   mahrOpinion: z.string().min(1, "يرجى تحديد الرأي في المهر والشبكة"),
   marriageTimeframe: z.string().min(1, "يرجى تحديد الفترة المتوقعة للزواج"),
+  marriageReadiness: z.string().min(1, "يرجى تحديد مدى الاستعداد للزواج").optional(),
   shariaVisionStance: z.string().min(1, "يرجى تحديد الموقف من الرؤية الشرعية"),
 
   // Descriptions (Strict 140 char minimum for seriousness + Contact Leakage Shield)

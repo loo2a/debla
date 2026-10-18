@@ -7,7 +7,7 @@ import {
   Nationalities, Countries, EducationLevels, IncomeLevels,
   SkinColors, BodyBuilds, HealthStatuses, ReligiousCommitmentLevels,
   PrayersCommitment, QaImaStances, MahrOpinions, MarriageTimeframes,
-  ShariaVisionStances, HobbiesList
+  MarriageReadinessLevels, ShariaVisionStances, HobbiesList
 } from "../../constants";
 import { Input } from "../ui/Input";
 import { Select } from "../ui/Select";
@@ -64,6 +64,7 @@ export const StepProfileForm: React.FC<StepProfileFormProps> = ({
       qaImaStance: initialData?.qaImaStance || "موضوع خاضع للاتفاق بين العائلتين",
       mahrOpinion: initialData?.mahrOpinion || "موضوع خاضع للاتفاق والنقاش المرن",
       marriageTimeframe: initialData?.marriageTimeframe || "خلال سنة على الأكثر",
+      marriageReadiness: initialData?.marriageReadiness || "مستعد تماماً وجاهز من كافة الجوانب (السكن والإمكانيات جاهزة)",
       shariaVisionStance: initialData?.shariaVisionStance || "أؤيد الرؤية الشرعية بوجود محرم في أقرب فرصة",
       aboutMe: initialData?.aboutMe || "",
       partnerSpecs: initialData?.partnerSpecs || "",
@@ -348,12 +349,22 @@ export const StepProfileForm: React.FC<StepProfileFormProps> = ({
               </Select>
 
               <Select
-                label="الفترة المرجوة للزواج"
+                label="الإطار الزمني المتوقع للزواج"
                 error={errors.marriageTimeframe?.message}
                 {...register("marriageTimeframe")}
               >
                 {MarriageTimeframes.map((t) => (
                   <option key={t} value={t}>{t}</option>
+                ))}
+              </Select>
+
+              <Select
+                label="مدى الاستعداد والجاهزية للزواج"
+                error={errors.marriageReadiness?.message}
+                {...register("marriageReadiness")}
+              >
+                {MarriageReadinessLevels.map((lvl) => (
+                  <option key={lvl} value={lvl}>{lvl}</option>
                 ))}
               </Select>
 

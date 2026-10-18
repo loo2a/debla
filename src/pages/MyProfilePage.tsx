@@ -13,7 +13,7 @@ import { getAvatarUrl } from "../lib/avatarUtils";
 import { 
   Nationalities, Countries, EducationLevels, IncomeLevels, 
   ReligiousCommitmentLevels, PrayersCommitment, QaImaStances, 
-  MahrOpinions, MarriageTimeframes, Avatars 
+  MahrOpinions, MarriageTimeframes, MarriageReadinessLevels, Avatars 
 } from "../constants";
 import { MaritalStatus, Gender } from "../types";
 import { MyTrustVerificationManager } from "../components/MyTrustVerificationManager";
@@ -47,6 +47,7 @@ export const MyProfilePage: React.FC = () => {
   const [editQaImaStance, setEditQaImaStance] = useState(currentUser?.qaImaStance || "موضوع خاضع للاتفاق بين العائلتين");
   const [editMahrOpinion, setEditMahrOpinion] = useState(currentUser?.mahrOpinion || "موضوع خاضع للاتفاق والنقاش المرن");
   const [editMarriageTimeframe, setEditMarriageTimeframe] = useState(currentUser?.marriageTimeframe || "خلال سنة على الأكثر");
+  const [editMarriageReadiness, setEditMarriageReadiness] = useState(currentUser?.marriageReadiness || "مستعد تماماً وجاهز من كافة الجوانب (السكن والإمكانيات جاهزة)");
   const [editAboutMe, setEditAboutMe] = useState(currentUser?.aboutMe || "");
   const [editPartnerSpecs, setEditPartnerSpecs] = useState(currentUser?.partnerSpecs || "");
 
@@ -67,6 +68,7 @@ export const MyProfilePage: React.FC = () => {
     setEditQaImaStance(currentUser.qaImaStance);
     setEditMahrOpinion(currentUser.mahrOpinion);
     setEditMarriageTimeframe(currentUser.marriageTimeframe);
+    setEditMarriageReadiness(currentUser.marriageReadiness || "مستعد تماماً وجاهز من كافة الجوانب (السكن والإمكانيات جاهزة)");
     setEditAboutMe(currentUser.aboutMe);
     setEditPartnerSpecs(currentUser.partnerSpecs);
     setIsEditing(true);
@@ -99,6 +101,7 @@ export const MyProfilePage: React.FC = () => {
       qaImaStance: editQaImaStance,
       mahrOpinion: editMahrOpinion,
       marriageTimeframe: editMarriageTimeframe,
+      marriageReadiness: editMarriageReadiness,
       aboutMe: editAboutMe.trim(),
       partnerSpecs: editPartnerSpecs.trim()
     });
@@ -554,6 +557,14 @@ export const MyProfilePage: React.FC = () => {
                 <span className="text-[9px] text-slate-400 block">مستوى الدخل</span>
                 <span className="font-bold text-slate-800 truncate block">{currentUser.income}</span>
               </div>
+              <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-100">
+                <span className="text-[9px] text-slate-400 block">مدى الاستعداد للزواج</span>
+                <span className="font-bold text-emerald-800 text-[11px] block">{currentUser.marriageReadiness || "مستعد تماماً وجاهز من كافة الجوانب"}</span>
+              </div>
+              <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-100 col-span-2 sm:col-span-1">
+                <span className="text-[9px] text-slate-400 block">الإطار الزمني المناسب</span>
+                <span className="font-bold text-slate-800 text-[11px] block">{currentUser.marriageTimeframe || "غير محدد"}</span>
+              </div>
             </div>
           </Card>
         </div>
@@ -692,17 +703,25 @@ export const MyProfilePage: React.FC = () => {
                 ))}
               </Select>
 
-              <div className="sm:col-span-2">
-                <Select
-                  label="الفترة المتوقعة لإتمام الزواج"
-                  value={editMarriageTimeframe}
-                  onChange={(e) => setEditMarriageTimeframe(e.target.value)}
-                >
-                  {MarriageTimeframes.map((tf) => (
-                    <option key={tf} value={tf}>{tf}</option>
-                  ))}
-                </Select>
-              </div>
+              <Select
+                label="مدى الاستعداد والجاهزية للزواج"
+                value={editMarriageReadiness}
+                onChange={(e) => setEditMarriageReadiness(e.target.value)}
+              >
+                {MarriageReadinessLevels.map((lvl) => (
+                  <option key={lvl} value={lvl}>{lvl}</option>
+                ))}
+              </Select>
+
+              <Select
+                label="الإطار الزمني الذي يناسبه للزواج"
+                value={editMarriageTimeframe}
+                onChange={(e) => setEditMarriageTimeframe(e.target.value)}
+              >
+                {MarriageTimeframes.map((tf) => (
+                  <option key={tf} value={tf}>{tf}</option>
+                ))}
+              </Select>
             </div>
             
             {/* Bio text areas */}

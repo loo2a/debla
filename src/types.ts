@@ -78,7 +78,8 @@ export interface UserProfile {
   // Matrimonial Opinions
   qaImaStance: string; // Stance on Marriage List (القايمة)
   mahrOpinion: string; // Stance on Mahr and Shabka
-  marriageTimeframe: string; // Expected time to marry
+  marriageTimeframe: string; // Expected time to marry (الإطار الزمني للزواج)
+  marriageReadiness?: string; // مدى الاستعداد للزواج (جاهزية السكن، الإمكانيات، التجهيز)
   shariaVisionStance: string; // Stance on Sharia viewing (الرؤية الشرعية)
 
   // Personal descriptions (minimum 140 characters)
