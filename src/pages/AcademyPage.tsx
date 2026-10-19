@@ -3,7 +3,8 @@ import type { AcademyArticle, ArticleCategory } from "../types";
 import { ArticleCard, CATEGORY_LABELS, CATEGORY_COLORS } from "../components/academy/ArticleCard";
 import { ArticleReader } from "../components/academy/ArticleReader";
 import { useApp } from "../lib/store";
-import { GraduationCap, Star, BookOpen, ChevronLeft } from "lucide-react";
+import { GraduationCap, Star, BookOpen, ChevronLeft, Award, Sparkles } from "lucide-react";
+import { MarriageReadinessQuizModal } from "../components/academy/MarriageReadinessQuizModal";
 
 const ALL_CATEGORIES: ArticleCategory[] = [
   "communication",
@@ -26,6 +27,7 @@ export const AcademyPage: React.FC = () => {
   const [selectedCategory, setSelectedCategory] = useState<ArticleCategory | "all">("all");
   const [openArticle, setOpenArticle] = useState<AcademyArticle | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [showQuizModal, setShowQuizModal] = useState(false);
 
   useEffect(() => {
     setIsLoading(true);
@@ -100,17 +102,47 @@ export const AcademyPage: React.FC = () => {
               style={{ width: `${progressPct}%` }}
             />
           </div>
-          <p className="text-emerald-200 text-[10px]">
-            {progressPct === 100
-              ? "🎉 أتممت قراءة جميع المقالات! أنت مستعد"
-              : progressPct >= 50
-              ? "ممتاز! أكملت أكثر من النصف"
-              : "ابدأ رحلتك نحو حياة زوجية ناجحة"}
-          </p>
+          <div className="flex items-center justify-between pt-1 border-t border-white/10">
+            <p className="text-emerald-200 text-[10px]">
+              {progressPct === 100
+                ? "🎉 أتممت قراءة جميع المقالات! أنت مستعد"
+                : progressPct >= 50
+                ? "ممتاز! أكملت أكثر من النصف"
+                : "ابدأ رحلتك نحو حياة زوجية ناجحة"}
+            </p>
+            {currentUser?.isMarriageCertified ? (
+              <span className="inline-flex items-center gap-1 text-[10px] font-extrabold bg-amber-400 text-slate-950 px-2 py-0.5 rounded-full">
+                <Award className="w-3 h-3 fill-slate-950" />
+                حاصل على الشارة
+              </span>
+            ) : null}
+          </div>
         </div>
       </div>
 
       <div className="max-w-md mx-auto px-4 -mt-4 space-y-4">
+        {/* Certificate / Quiz Action Banner */}
+        <div className="bg-gradient-to-r from-amber-500 via-amber-400 to-amber-500 rounded-3xl p-4 text-slate-950 shadow-md flex items-center justify-between gap-3 relative overflow-hidden">
+          <div className="space-y-1 text-right">
+            <div className="flex items-center gap-1.5 font-black text-xs">
+              <Award className="w-4 h-4 fill-slate-950" />
+              <span>{currentUser?.isMarriageCertified ? "شهادة اجتياز دورة المقبلين على الزواج 🎓" : "شهادة اجتياز دورة المقبلين على الزواج"}</span>
+            </div>
+            <p className="text-[11px] text-slate-900 font-medium leading-snug">
+              {currentUser?.isMarriageCertified
+                ? `مبارك! أنت حاصل على شارة «مؤهل للزواج وواعٍ بالمسؤولية» بنتيجة ${currentUser.marriageExamScore || 100}%.`
+                : "اجتز اختباراً تفاعلياً قصيراً (5 أسئلة) واحصل على شارة «مؤهل للزواج وواعٍ بالمسؤولية» على بروفايلك."}
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setShowQuizModal(true)}
+            className="px-3.5 py-2.5 bg-slate-950 text-amber-300 hover:text-white rounded-2xl text-xs font-black shrink-0 transition shadow-sm cursor-pointer flex items-center gap-1"
+          >
+            <span>{currentUser?.isMarriageCertified ? "عرض الشارة" : "بدء الاختبار"}</span>
+            <Sparkles className="w-3.5 h-3.5" />
+          </button>
+        </div>
         {/* Category tabs */}
         <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
           <button
@@ -176,6 +208,12 @@ export const AcademyPage: React.FC = () => {
           </p>
         </div>
       </div>
+
+      {/* Quiz Modal */}
+      <MarriageReadinessQuizModal
+        isOpen={showQuizModal}
+        onClose={() => setShowQuizModal(false)}
+      />
     </div>
   );
 };

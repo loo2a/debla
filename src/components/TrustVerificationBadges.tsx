@@ -6,7 +6,8 @@ import {
 } from "../lib/verificationTiers";
 import { 
   Smartphone, Camera, ShieldCheck, FileCheck2, 
-  CheckCircle2, XCircle, Info, ShieldAlert, X, AlertTriangle 
+  CheckCircle2, XCircle, Info, ShieldAlert, X, AlertTriangle,
+  Award, Sparkles
 } from "lucide-react";
 
 interface TrustVerificationBadgesProps {
@@ -45,37 +46,49 @@ export const TrustVerificationBadges: React.FC<TrustVerificationBadgesProps> = (
       {/* 1. Compact Variant (For Cards / Headers)             */}
       {/* ---------------------------------------------------- */}
       {variant === "compact" && (
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation();
-            setShowModal(true);
-          }}
-          className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold transition cursor-pointer ${
-            verifiedCount > 0
-              ? "bg-emerald-50 text-emerald-800 border border-emerald-200 hover:bg-emerald-100/80"
-              : "bg-slate-100 text-slate-500 border border-slate-200 hover:bg-slate-200/80"
-          } ${className}`}
-          title="عرض مستويات التحقق المعتمدة"
-        >
-          <div className="flex items-center -space-x-1 space-x-reverse">
-            {tiers
-              .filter((t) => t.isVerified)
-              .slice(0, 3)
-              .map((t) => (
-                <span
-                  key={t.tier.id}
-                  className="w-4 h-4 rounded-full bg-white border border-emerald-300 flex items-center justify-center text-emerald-700 shadow-2xs"
-                >
-                  {renderIcon(t.tier.iconName, "w-2.5 h-2.5")}
-                </span>
-              ))}
-          </div>
-          <span>
-            {verifiedCount > 0 ? `تحقق (${verifiedCount}/4)` : "غير موثق"}
-          </span>
-          <Info className="w-2.5 h-2.5 opacity-60" />
-        </button>
+        <div className={`inline-flex items-center gap-1.5 ${className}`}>
+          {user.isMarriageCertified && (
+            <span 
+              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-black bg-gradient-to-r from-amber-400 to-amber-500 text-slate-950 border border-amber-300 shadow-2xs"
+              title="حاصل على شهادة اجتياز دورة المقبلين على الزواج (مؤهل للزواج وواعٍ بالمسؤولية)"
+            >
+              <Award className="w-3 h-3 fill-slate-950" />
+              <span>مؤهل للزواج 🎓</span>
+            </span>
+          )}
+
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              setShowModal(true);
+            }}
+            className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold transition cursor-pointer ${
+              verifiedCount > 0
+                ? "bg-emerald-50 text-emerald-800 border border-emerald-200 hover:bg-emerald-100/80"
+                : "bg-slate-100 text-slate-500 border border-slate-200 hover:bg-slate-200/80"
+            }`}
+            title="عرض مستويات التحقق المعتمدة"
+          >
+            <div className="flex items-center -space-x-1 space-x-reverse">
+              {tiers
+                .filter((t) => t.isVerified)
+                .slice(0, 3)
+                .map((t) => (
+                  <span
+                    key={t.tier.id}
+                    className="w-4 h-4 rounded-full bg-white border border-emerald-300 flex items-center justify-center text-emerald-700 shadow-2xs"
+                  >
+                    {renderIcon(t.tier.iconName, "w-2.5 h-2.5")}
+                  </span>
+                ))}
+            </div>
+            <span>
+              {verifiedCount > 0 ? `تحقق (${verifiedCount}/4)` : "غير موثق"}
+            </span>
+            <Info className="w-2.5 h-2.5 opacity-60" />
+          </button>
+        </div>
       )}
 
       {/* ---------------------------------------------------- */}
@@ -83,6 +96,16 @@ export const TrustVerificationBadges: React.FC<TrustVerificationBadgesProps> = (
       {/* ---------------------------------------------------- */}
       {variant === "chips" && (
         <div className={`flex flex-wrap items-center gap-1.5 ${className}`}>
+          {user.isMarriageCertified && (
+            <span 
+              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-black bg-gradient-to-r from-amber-400 via-amber-300 to-amber-500 text-slate-950 border border-amber-300 shadow-2xs"
+              title={`مؤهل للزواج وواعٍ بالمسؤولية - نتيجة ${user.marriageExamScore || 100}%`}
+            >
+              <Award className="w-3.5 h-3.5 fill-slate-950" />
+              <span>مؤهل للزواج وواعٍ بالمسؤولية 🎓</span>
+            </span>
+          )}
+
           {tiers.map((t) => (
             <button
               key={t.tier.id}
@@ -132,8 +155,32 @@ export const TrustVerificationBadges: React.FC<TrustVerificationBadgesProps> = (
             </span>
           </div>
 
-          {/* 4 Tiers List */}
           <div className="grid grid-cols-1 gap-2.5">
+            {/* Marriage Readiness Academy Certificate Item (If certified) */}
+            {user.isMarriageCertified && (
+              <div className="p-3 rounded-2xl border bg-gradient-to-l from-amber-50/90 via-amber-50/50 to-white border-amber-200 space-y-1.5 shadow-2xs">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="p-1.5 rounded-lg border bg-amber-100 text-amber-800 border-amber-200">
+                      <Award className="w-4 h-4 fill-amber-300" />
+                    </span>
+                    <div>
+                      <span className="font-extrabold text-xs text-amber-950 block">
+                        مؤهل للزواج وواعٍ بالمسؤولية 🎓
+                      </span>
+                    </div>
+                  </div>
+                  <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-900 border border-amber-300">
+                    <CheckCircle2 className="w-3 h-3 text-amber-700" />
+                    <span>اجتاز الاختبار ({user.marriageExamScore || 100}%)</span>
+                  </span>
+                </div>
+                <p className="text-[11px] text-slate-700 leading-relaxed pr-8">
+                  اجتاز اختبار أكاديمية الاستعداد للزواج بنجاح، مما يعكس اطلاعه الجاد على أسس الحوار البنّاء، وإدارة الخلافات بمودة، وفهم الحقوق والواجبات الزوجية.
+                </p>
+              </div>
+            )}
+
             {tiers.map((t) => (
               <div
                 key={t.tier.id}

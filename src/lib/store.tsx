@@ -11,6 +11,7 @@ import { supabase } from "./supabase";
 import { compressImage } from "./imageUtils";
 import { INITIAL_ACADEMY_ARTICLES } from "./defaultAcademyArticles";
 import { preCheckUploadedImage } from "./photoModeration";
+import { getJourneyState } from "./marriageJourney";
 
 export interface ActionResult {
   ok: boolean;
@@ -125,6 +126,7 @@ interface AppContextType {
   fetchAcademyArticles: () => Promise<void>;
   markArticleRead: (articleId: string) => Promise<{ pointsAwarded: number; alreadyRead: boolean }>;
   rateArticle: (articleId: string, rating: number) => Promise<void>;
+  submitMarriageQuizResult: (scorePercent: number) => Promise<ActionResult>;
 
   // Photo Moderation & Defense (إدارة واعتماد الصور الشخصية)
   adminApprovePhoto: (userId: string) => Promise<ActionResult>;
@@ -256,6 +258,9 @@ const toProfile = (row: any, priv?: any, sensitive?: any, pref?: any): UserProfi
   photoRejectedReason: row.photo_rejected_reason || row.photoRejectedReason || undefined,
   photoReportsCount: row.photo_reports_count ?? row.photoReportsCount ?? 0,
   photoSubmittedAt: row.photo_submitted_at || row.photoSubmittedAt || undefined,
+  isMarriageCertified: row.is_marriage_certified ?? row.isMarriageCertified ?? false,
+  marriageCertificateDate: row.marriage_certificate_date || row.marriageCertificateDate || undefined,
+  marriageExamScore: row.marriage_exam_score ?? row.marriageExamScore ?? undefined,
 });
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -825,6 +830,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (profileData.partnerSpecs) profileData.partner_specs = profileData.partnerSpecs;
     if (profileData.photoPrivacy) profileData.photo_privacy = profileData.photoPrivacy;
     if (profileData.incognitoMode !== undefined) profileData.incognito_mode = profileData.incognitoMode;
+    if (profileData.isMarriageCertified !== undefined) profileData.is_marriage_certified = profileData.isMarriageCertified;
+    if (profileData.marriageCertificateDate) profileData.marriage_certificate_date = profileData.marriageCertificateDate;
+    if (profileData.marriageExamScore !== undefined) profileData.marriage_exam_score = profileData.marriageExamScore;
 
     let merged: UserProfile = { ...currentUser, ...updatedData };
 
@@ -1161,6 +1169,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (!text) return { ok: false, error: "الرسالة فارغة." };
     if (text.length > MAX_MESSAGE_LENGTH) {
       return fail({ code: "23514" });
+    }
+
+    // التحقق من حالة رحلة الزواج: منع الإلحاح أو الرسائل بعد إنهاء التعارف بالاعتذار
+    const journeyState = getJourneyState(currentUser.id, toUserId);
+    if (journeyState.status === "concluded" && !text.includes("اعتذار راقٍ وإنهاء مسار التعارف")) {
+      return { 
+        ok: false, 
+        error: "تم إنهاء مسار التعارف باعتذار محترم مسبقاً، وتوقف التواصل لحفظ الكرامة ومنع الإلحاح وفق ميثاق الوقار." 
+      };
     }
 
     // محاولة استخدام RPC المحمي مع فحص Rate Limit
@@ -1837,6 +1854,60 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     );
   }, []);
 
+  const submitMarriageQuizResult = useCallback(async (scorePercent: number): Promise<ActionResult> => {
+    if (!currentUser) return { ok: false, error: "يجب تسجيل الدخول أولاً." };
+
+    const isPassed = scorePercent >= 80;
+    const certDate = new Date().toISOString();
+
+    try {
+      // محاولة استدعاء دالة RPC في قاعدة البيانات إن وُجدت
+      const { data, error } = await supabase.rpc("submit_marriage_quiz_rpc", {
+        p_score: scorePercent,
+        p_passed: isPassed,
+      });
+
+      if (error) {
+        // Fallback: التحديث المباشر للبروفايل
+        const updateData: Partial<UserProfile> = {
+          marriageExamScore: scorePercent,
+          ...(isPassed ? {
+            isMarriageCertified: true,
+            marriageCertificateDate: certDate,
+          } : {})
+        };
+        await saveProfile(updateData);
+      } else if (data?.ok) {
+        if (isPassed) {
+          setCurrentUser(prev => prev ? {
+            ...prev,
+            isMarriageCertified: true,
+            marriageCertificateDate: certDate,
+            marriageExamScore: scorePercent,
+          } : prev);
+        }
+      }
+    } catch (_) {
+      // Fallback محلي
+      const updateData: Partial<UserProfile> = {
+        marriageExamScore: scorePercent,
+        ...(isPassed ? {
+          isMarriageCertified: true,
+          marriageCertificateDate: certDate,
+        } : {})
+      };
+      await saveProfile(updateData);
+    }
+
+    return {
+      ok: true,
+      data: {
+        isPassed,
+        score: scorePercent,
+      }
+    };
+  }, [currentUser, saveProfile]);
+
   // ------------------------------------------------------------------
   // ⚖️ خط الدفاع الثاني: إدارة واعتماد الصور الشخصية
   // ------------------------------------------------------------------
@@ -1992,6 +2063,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       fetchAcademyArticles,
       markArticleRead,
       rateArticle,
+      submitMarriageQuizResult,
 
       // Photo Moderation & Defense
       adminApprovePhoto,

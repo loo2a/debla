@@ -109,6 +109,21 @@ export interface UserProfile {
   photoRejectedReason?: string;
   photoReportsCount?: number;
   photoSubmittedAt?: string;
+  isMarriageCertified?: boolean; // حاصل على شهادة اجتياز دورة المقبلين على الزواج
+  marriageCertificateDate?: string; // تاريخ الحصول على شهادة الأكاديمية
+  marriageExamScore?: number; // درجة اجتياز الاختبار (مثلاً 90%)
+}
+
+export interface MarriageQuizQuestion {
+  id: string;
+  question: string;
+  scenario: string; // الموقف العملي
+  options: {
+    id: string;
+    text: string;
+    isCorrect: boolean;
+    explanation: string; // التوضيح الشرعي والتربوي
+  }[];
 }
 
 export type VerificationTierType = "phone" | "photo" | "id" | "docs";

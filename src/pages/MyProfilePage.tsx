@@ -3,8 +3,9 @@ import { useApp } from "../lib/store";
 import { useUIStore } from "../stores/uiStore";
 import { 
   Sparkles, EyeOff, Edit, ShieldCheck, Trash2, AlertTriangle, 
-  User, Check, X, Camera, Lock, Flame, CheckCircle2 
+  User, Check, X, Camera, Lock, Flame, CheckCircle2, Award, ChevronLeft 
 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { Button } from "../components/ui/Button";
 import { Card } from "../components/ui/Card";
 import { Input } from "../components/ui/Input";
@@ -21,8 +22,10 @@ import { WardGuardianSettings } from "../components/WardGuardianSettings";
 import { GuardianPortal } from "../components/GuardianPortal";
 import { CompatibilitySurveyModal } from "../components/CompatibilitySurveyModal";
 import { ProfileEditRequestModal } from "../components/ProfileEditRequestModal";
+import { MarriageReadinessQuizModal } from "../components/academy/MarriageReadinessQuizModal";
 
 export const MyProfilePage: React.FC = () => {
+  const navigate = useNavigate();
   const { 
     currentUser, updateProfile, updateAvatar, uploadCustomImage, 
     updatePhotoPrivacy, toggleIncognitoMode, deleteMyAccount,
@@ -34,6 +37,7 @@ export const MyProfilePage: React.FC = () => {
   const [showAvatarModal, setShowAvatarModal] = useState(false);
   const [showSurveyModal, setShowSurveyModal] = useState(false);
   const [showEditRequestModal, setShowEditRequestModal] = useState(false);
+  const [showQuizModal, setShowQuizModal] = useState(false);
 
   // Form Fields State
   const [editProfession, setEditProfession] = useState(currentUser?.profession || "");
@@ -317,6 +321,44 @@ export const MyProfilePage: React.FC = () => {
       ) : (
         <WardGuardianSettings />
       )}
+
+      {/* Marriage Readiness Academy Certificate Card */}
+      <Card className="border border-amber-300 bg-gradient-to-r from-amber-50 via-white to-amber-50/40 p-4 space-y-3 shadow-xs">
+        <div className="flex justify-between items-center pb-2 border-b border-amber-100">
+          <div className="flex items-center gap-2.5">
+            <div className="p-2 rounded-xl bg-amber-500 text-slate-950 shadow-xs">
+              <Award className="w-5 h-5 fill-amber-200" />
+            </div>
+            <div>
+              <h4 className="font-extrabold text-slate-900 text-xs sm:text-sm flex items-center gap-1.5">
+                <span>شهادة المقبلين على الزواج</span>
+                {currentUser.isMarriageCertified ? (
+                  <span className="text-[10px] bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 rounded-full border border-emerald-200">
+                    مُجتاز بنجاح ({currentUser.marriageExamScore || 100}%)
+                  </span>
+                ) : (
+                  <span className="text-[10px] bg-amber-100 text-amber-900 font-bold px-2 py-0.5 rounded-full border border-amber-200">
+                    موصى به للأسر
+                  </span>
+                )}
+              </h4>
+              <p className="text-[11px] text-slate-500">
+                {currentUser.isMarriageCertified
+                  ? "شارة «مؤهل للزواج وواعٍ بالمسؤولية 🎓» مفعّلة ومعروضة في ملفك الشخصي أمام الأعضاء."
+                  : "اجتز اختبار الأكاديمية القصير لتحصل على شارة التميز والوعي وتزيد من فرص القبول والجدية."}
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => setShowQuizModal(true)}
+            className="text-[11px] font-extrabold text-slate-950 bg-amber-400 hover:bg-amber-500 px-3 py-1.5 rounded-xl transition flex items-center gap-1 shadow-2xs shrink-0 cursor-pointer"
+          >
+            <Sparkles className="w-3.5 h-3.5 fill-slate-950" />
+            <span>{currentUser.isMarriageCertified ? "إعادة الاختبار" : "بدء الاختبار"}</span>
+          </button>
+        </div>
+      </Card>
 
       {/* Main Content: View Mode vs Edit Mode */}
       {!isEditing ? (
@@ -862,6 +904,12 @@ export const MyProfilePage: React.FC = () => {
       <ProfileEditRequestModal
         isOpen={showEditRequestModal}
         onClose={() => setShowEditRequestModal(false)}
+      />
+
+      {/* Marriage Readiness Quiz Modal */}
+      <MarriageReadinessQuizModal
+        isOpen={showQuizModal}
+        onClose={() => setShowQuizModal(false)}
       />
 
     </div>

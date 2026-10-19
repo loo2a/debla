@@ -9,9 +9,12 @@ import {
   Heart, EyeOff, Ban, AlertTriangle, MessageSquare, 
   Bookmark, ArrowRight, ShieldCheck, Sparkles, MapPin, 
   User, CheckCircle, HelpCircle, Lock, Check, Share2,
-  Flame, CheckCircle2
+  Flame, CheckCircle2, Smile, X, Award
 } from "lucide-react";
 import { TrustVerificationBadges } from "./TrustVerificationBadges";
+import { 
+  APOLOGY_TEMPLATES, getJourneyState, saveJourneyState, syncJourneyToSupabase 
+} from "../lib/marriageJourney";
 
 interface ProfileDetailsProps {
   userId?: string;
@@ -33,7 +36,7 @@ export const ProfileDetails: React.FC<ProfileDetailsProps> = ({
   const { 
     currentUser, profiles, expressInterest, acceptInterest, ignoreProfile, 
     blockProfile, reportProfile, interactions, recordProfileView,
-    mySurvey, allSurveys, fetchCompatibilitySurvey
+    mySurvey, allSurveys, fetchCompatibilitySurvey, sendMessage
   } = useApp();
   const { addToast, showConfirm, triggerReviewPrompt } = useUIStore();
 
@@ -41,6 +44,12 @@ export const ProfileDetails: React.FC<ProfileDetailsProps> = ({
   const [reportReason, setReportReason] = useState("");
   const [showPremiumBlocker, setShowPremiumBlocker] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
+
+  // اعتذار محترم بضغطة واحدة
+  const [showApologyModal, setShowApologyModal] = useState(false);
+  const [selectedApologyId, setSelectedApologyId] = useState("apology_1");
+  const [customApologyText, setCustomApologyText] = useState("");
+  const [isSendingApology, setIsSendingApology] = useState(false);
 
   const profile = profiles.find(p => p.id === userId);
 
@@ -139,6 +148,49 @@ export const ProfileDetails: React.FC<ProfileDetailsProps> = ({
       handleBack();
     } else {
       addToast(res.error || "فشل تجاهل الملف", "error");
+    }
+  };
+
+  const handleConfirmApology = async () => {
+    if (!currentUser || !profile) return;
+    setIsSendingApology(true);
+    try {
+      let finalApologyText = "";
+      if (customApologyText.trim()) {
+        finalApologyText = customApologyText.trim();
+      } else {
+        const found = APOLOGY_TEMPLATES.find((t) => t.id === selectedApologyId);
+        finalApologyText = found ? found.content : APOLOGY_TEMPLATES[0].content;
+      }
+
+      // تحديث حالة رحلة الزواج إلى concluded محلياً وعلى السيرفر
+      const existingJourney = getJourneyState(currentUser.id, profile.id);
+      const updatedJourney = {
+        ...existingJourney,
+        status: "concluded" as const,
+        concludedReason: finalApologyText,
+        concludedBy: currentUser.id,
+        updatedAt: new Date().toISOString(),
+      };
+      saveJourneyState(updatedJourney);
+      void syncJourneyToSupabase(currentUser.id, profile.id, updatedJourney);
+
+      // إرسال رسالة الاعتذار المهذبة
+      const message = `🌸 [اعتذار راقٍ وإنهاء مسار التعارف]:\n${finalApologyText}\n\n(تم إغلاق المحادثة تلقائياً وفق ميثاق الوقار لحفظ الكرامة ومنع أي إلحاح أو عتاب)`;
+      try {
+        await sendMessage(profile.id, message);
+      } catch {}
+
+      // تسجيل التجاهل بهدوء لمنع تكرار الإزعاج
+      try {
+        await ignoreProfile(profile.id);
+      } catch {}
+
+      setShowApologyModal(false);
+      addToast("تم إرسال الاعتذار المحترم وإغلاق التواصل بنجاح، حفظ الله كرامتكما ووفقكما.", "success");
+      handleBack();
+    } finally {
+      setIsSendingApology(false);
     }
   };
 
@@ -338,24 +390,57 @@ export const ProfileDetails: React.FC<ProfileDetailsProps> = ({
           </div>
         )}
 
+        {/* Marriage Readiness Academy Certificate Spotlight Card */}
+        {profile.isMarriageCertified && (
+          <div className="bg-gradient-to-r from-amber-500 via-amber-400 to-amber-500 rounded-3xl p-4.5 text-slate-950 shadow-sm flex items-center justify-between gap-3 border border-amber-300">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-2xl bg-slate-950 text-amber-300 flex items-center justify-center shrink-0 shadow-xs">
+                <Award className="w-6 h-6 fill-amber-300" />
+              </div>
+              <div className="space-y-0.5 text-right">
+                <div className="flex items-center gap-1.5">
+                  <h4 className="font-black text-xs sm:text-sm text-slate-950">
+                    مؤهل للزواج وواعٍ بالمسؤولية 🎓
+                  </h4>
+                  <span className="text-[10px] bg-slate-950 text-amber-300 font-extrabold px-2 py-0.5 rounded-full">
+                    معتمد
+                  </span>
+                </div>
+                <p className="text-[11px] text-slate-900 font-medium leading-snug">
+                  اجتاز صاحب هذا الملف دورة واختبار أكاديمية الاستعداد للزواج (بدرجة {profile.marriageExamScore || 100}%) تأكيداً على نضجه ووعيه بالحقوق الأسرية وحسن المعاشرة.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Dynamic Action Buttons bar */}
-        <div className="bg-white rounded-2xl border border-slate-100 p-4 shadow-sm flex justify-around gap-2">
+        <div className="bg-white rounded-2xl border border-slate-100 p-4 shadow-sm flex flex-wrap justify-around gap-2">
           <button 
             onClick={handleInterest}
             disabled={isInterested}
-            className={`flex flex-col items-center justify-center flex-1 py-2.5 rounded-xl border transition ${
+            className={`flex flex-col items-center justify-center flex-1 min-w-[70px] py-2.5 rounded-xl border transition ${
               isInterested 
                 ? "bg-pink-50 border-pink-200 text-pink-600" 
                 : "bg-white border-slate-150 hover:bg-slate-50 text-slate-600"
             }`}
           >
             <Heart className={`w-5 h-5 mb-1 ${isInterested ? "fill-pink-600 text-pink-600" : ""}`} />
-            <span className="text-[10px] font-bold">{isInterested ? "مهتم به" : "اهتمام ورؤية"}</span>
+            <span className="text-[10px] font-bold">{isInterested ? "مهتم به" : "اهتمام"}</span>
+          </button>
+
+          <button 
+            onClick={() => setShowApologyModal(true)}
+            className="flex flex-col items-center justify-center flex-1 min-w-[70px] py-2.5 rounded-xl border border-rose-200 bg-rose-50/50 hover:bg-rose-50 text-rose-700 transition"
+            title="إنهاء التعارف برسالة مهذبة جاهزة"
+          >
+            <Smile className="w-5 h-5 mb-1 text-rose-600" />
+            <span className="text-[10px] font-bold">اعتذار محترم</span>
           </button>
 
           <button 
             onClick={handleIgnore}
-            className="flex flex-col items-center justify-center flex-1 py-2.5 rounded-xl border border-slate-150 hover:bg-slate-50 text-slate-600 bg-white transition"
+            className="flex flex-col items-center justify-center flex-1 min-w-[70px] py-2.5 rounded-xl border border-slate-150 hover:bg-slate-50 text-slate-600 bg-white transition"
           >
             <EyeOff className="w-5 h-5 mb-1" />
             <span className="text-[10px] font-bold">تجاهل</span>
@@ -363,15 +448,15 @@ export const ProfileDetails: React.FC<ProfileDetailsProps> = ({
 
           <button 
             onClick={handleMessageClick}
-            className="flex flex-col items-center justify-center flex-1 py-2.5 rounded-xl border border-emerald-200 bg-emerald-50/50 hover:bg-emerald-50 text-emerald-700 transition"
+            className="flex flex-col items-center justify-center flex-1 min-w-[70px] py-2.5 rounded-xl border border-emerald-200 bg-emerald-50/50 hover:bg-emerald-50 text-emerald-700 transition"
           >
             <MessageSquare className="w-5 h-5 mb-1" />
-            <span className="text-[10px] font-bold">إرسال رسالة</span>
+            <span className="text-[10px] font-bold">رسالة</span>
           </button>
 
           <button 
             onClick={() => setIsSaved(!isSaved)}
-            className={`flex flex-col items-center justify-center flex-1 py-2.5 rounded-xl border transition ${
+            className={`flex flex-col items-center justify-center flex-1 min-w-[70px] py-2.5 rounded-xl border transition ${
               isSaved 
                 ? "bg-amber-50 border-amber-200 text-amber-600" 
                 : "bg-white border-slate-150 hover:bg-slate-50 text-slate-600"
@@ -762,6 +847,100 @@ export const ProfileDetails: React.FC<ProfileDetailsProps> = ({
                 className="w-2/3 py-2.5 bg-amber-500 hover:bg-amber-600 text-slate-950 rounded-xl text-xs font-extrabold transition shadow-md shadow-amber-500/10"
               >
                 الاشتراك في باقة التميز
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Polite Apology Modal (إنهاء التعارف بأدب من غير إحراج) */}
+      {showApologyModal && (
+        <div className="fixed inset-0 bg-slate-950/60 z-50 flex items-center justify-center p-4" dir="rtl">
+          <div className="bg-white rounded-3xl max-w-md w-full p-6 space-y-4 shadow-2xl">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div className="flex items-center gap-2">
+                <Smile className="w-5 h-5 text-rose-600" />
+                <h3 className="font-extrabold text-slate-900 text-sm">اعتذار محترم وإنهاء مسار التعارف</h3>
+              </div>
+              <button 
+                onClick={() => setShowApologyModal(false)}
+                className="p-1 rounded-lg text-slate-400 hover:bg-slate-100"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <p className="text-xs text-slate-600 leading-relaxed">
+              من أدب المسلم والوفاء بالأمانة إعلام الطرف الآخر بقرارك بلطف ودعاء بالتوفيق عند عدم وجود توافق، من غير إحراج أو تجاهل مفاجئ:
+            </p>
+
+            {/* Anti-harassment and safety rules notice */}
+            <div className="bg-emerald-50 border border-emerald-200/80 rounded-2xl p-3 text-[11px] text-emerald-950 space-y-1 leading-snug">
+              <span className="font-extrabold flex items-center gap-1.5 text-emerald-800">
+                <ShieldCheck className="w-4 h-4 text-emerald-600" />
+                <span>ضمانات وقواعد التطبيق لإنهاء التعارف بكرامة:</span>
+              </span>
+              <ul className="list-disc list-inside space-y-0.5 text-emerald-900/90 pr-1">
+                <li><strong>توقف التواصل فوراً:</strong> يتم إغلاق صندوق المحادثة تلقائياً لمنع أي إلحاح أو عتاب.</li>
+                <li><strong>حظر الانتقام والتقييمات الكيدية:</strong> يُمنع الطرفان من تقديم أي تقييم مسيء أو بلاغ كيدي.</li>
+                <li><strong>حفظ السمعة والخصوصية:</strong> لا يؤثر الاعتذار على نقاط أو ظهور حساب أي منكما.</li>
+              </ul>
+            </div>
+
+            <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
+              {APOLOGY_TEMPLATES.map((tmpl) => (
+                <label 
+                  key={tmpl.id}
+                  className={`p-3 rounded-2xl border block cursor-pointer transition space-y-1 ${
+                    selectedApologyId === tmpl.id
+                      ? "border-emerald-600 bg-emerald-50/50"
+                      : "border-slate-200 hover:bg-slate-50"
+                  }`}
+                >
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="radio"
+                      name="profile_apology_option"
+                      checked={selectedApologyId === tmpl.id}
+                      onChange={() => setSelectedApologyId(tmpl.id)}
+                      className="text-emerald-600 focus:ring-emerald-500"
+                    />
+                    <span className="font-bold text-xs text-slate-800">{tmpl.title}</span>
+                  </div>
+                  <p className="text-[11px] text-slate-600 leading-relaxed pr-6">
+                    "{tmpl.content}"
+                  </p>
+                </label>
+              ))}
+            </div>
+
+            {/* Custom apology option */}
+            <div className="space-y-1">
+              <span className="text-xs font-bold text-slate-700 block">أو اكتب رسالة اعتذار مخصصة مهذبة:</span>
+              <textarea
+                value={customApologyText}
+                onChange={(e) => setCustomApologyText(e.target.value)}
+                rows={2}
+                placeholder="اكتب كلماتك الطيبة هنا..."
+                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-emerald-600 leading-relaxed"
+              />
+            </div>
+
+            <div className="pt-2 flex gap-2">
+              <button
+                type="button"
+                disabled={isSendingApology}
+                onClick={() => void handleConfirmApology()}
+                className="flex-1 py-2.5 bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs rounded-xl shadow-xs transition disabled:opacity-50"
+              >
+                {isSendingApology ? "جاري الإرسال..." : "إرسال الاعتذار وإنهاء المسار"}
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowApologyModal(false)}
+                className="px-4 py-2.5 bg-slate-100 text-slate-600 font-bold text-xs rounded-xl hover:bg-slate-200 transition"
+              >
+                تراجع
               </button>
             </div>
           </div>

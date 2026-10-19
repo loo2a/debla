@@ -243,6 +243,40 @@ export const Dashboard: React.FC<DashboardProps> = ({
           <ChevronLeft className="w-4 h-4 text-emerald-600 group-hover:-translate-x-1 transition shrink-0 mr-2" />
         </div>
 
+        {/* Marriage Readiness Academy Certificate Card */}
+        <div 
+          onClick={() => navigate("/academy")}
+          className="bg-gradient-to-l from-amber-500/10 via-amber-400/20 to-emerald-500/10 border border-amber-300 rounded-2xl p-4 shadow-sm hover:border-amber-400 transition cursor-pointer flex items-center justify-between group"
+        >
+          <div className="flex items-center gap-3">
+            <div className="w-11 h-11 rounded-xl bg-amber-500 text-slate-950 flex items-center justify-center text-xl shadow-xs shrink-0 font-bold">
+              🎓
+            </div>
+            <div className="space-y-0.5 text-right">
+              <div className="flex items-center gap-2">
+                <h4 className="font-extrabold text-xs text-slate-800 group-hover:text-amber-900">
+                  دورة المقبلين على الزواج
+                </h4>
+                {currentUser.isMarriageCertified ? (
+                  <span className="text-[10px] bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 rounded-full">
+                    حاصل على الشارة ({currentUser.marriageExamScore || 100}%)
+                  </span>
+                ) : (
+                  <span className="text-[10px] bg-amber-400 text-slate-950 font-black px-2 py-0.5 rounded-full">
+                    اختبار 5 أسئلة
+                  </span>
+                )}
+              </div>
+              <p className="text-[11px] text-slate-600 leading-snug">
+                {currentUser.isMarriageCertified
+                  ? "ملفك مميز بشارة «مؤهل للزواج وواعٍ بالمسؤولية» وتظهر للأسر والباحثين."
+                  : "اجتز اختبار الأكاديمية التفاعلي لتوثيق وعيك بالحقوق الزوجية وطمأنة الأسر."}
+              </p>
+            </div>
+          </div>
+          <ChevronLeft className="w-4 h-4 text-amber-700 group-hover:-translate-x-1 transition shrink-0 mr-2" />
+        </div>
+
         {/* Quick action banners */}
         <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
           <div className="p-5 flex justify-between items-center bg-slate-50 border-b border-slate-100">
