@@ -4,7 +4,7 @@ import {
   HelpCircle, Sparkles, RefreshCw, X, ShieldCheck 
 } from "lucide-react";
 import { 
-  MARRIAGE_READINESS_QUESTIONS, 
+  getMarriageQuizQuestions, 
   PASSING_SCORE_PERCENTAGE 
 } from "../../lib/marriageQuizData";
 import { useApp } from "../../lib/store";
@@ -22,6 +22,7 @@ export const MarriageReadinessQuizModal: React.FC<MarriageReadinessQuizModalProp
   const { currentUser, submitMarriageQuizResult } = useApp();
   const { addToast } = useUIStore();
 
+  const questions = getMarriageQuizQuestions(currentUser?.religion);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [selectedAnswers, setSelectedAnswers] = useState<Record<string, string>>({});
   const [showExplanation, setShowExplanation] = useState(false);
@@ -31,10 +32,10 @@ export const MarriageReadinessQuizModal: React.FC<MarriageReadinessQuizModalProp
 
   if (!isOpen) return null;
 
-  const currentQuestion = MARRIAGE_READINESS_QUESTIONS[currentIndex];
+  const currentQuestion = questions[currentIndex];
   const selectedOptionId = selectedAnswers[currentQuestion.id];
   const selectedOption = currentQuestion.options.find((o) => o.id === selectedOptionId);
-  const totalQuestions = MARRIAGE_READINESS_QUESTIONS.length;
+  const totalQuestions = questions.length;
 
   const handleSelectOption = (optionId: string) => {
     if (showExplanation) return; // Prevent changing after showing answer
@@ -52,7 +53,7 @@ export const MarriageReadinessQuizModal: React.FC<MarriageReadinessQuizModalProp
     } else {
       // Calculate final score
       let correctCount = 0;
-      MARRIAGE_READINESS_QUESTIONS.forEach((q) => {
+      questions.forEach((q) => {
         const chosenId = selectedAnswers[q.id];
         const correctOpt = q.options.find((o) => o.isCorrect);
         if (chosenId && correctOpt && chosenId === correctOpt.id) {

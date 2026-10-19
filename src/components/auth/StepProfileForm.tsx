@@ -7,7 +7,9 @@ import {
   Nationalities, Countries, EducationLevels, IncomeLevels,
   SkinColors, BodyBuilds, HealthStatuses, ReligiousCommitmentLevels,
   PrayersCommitment, QaImaStances, MahrOpinions, MarriageTimeframes,
-  MarriageReadinessLevels, ShariaVisionStances, HobbiesList
+  MarriageReadinessLevels, ShariaVisionStances, HobbiesList,
+  ReligionsList, ChristianDenominationsList, ChristianReligiousCommitmentLevels,
+  ChristianPrayersCommitment, ChurchAttendanceOptions
 } from "../../constants";
 import { Input } from "../ui/Input";
 import { Select } from "../ui/Select";
@@ -56,7 +58,9 @@ export const StepProfileForm: React.FC<StepProfileFormProps> = ({
       bodyBuild: initialData?.bodyBuild || "متوسط",
       healthStatus: initialData?.healthStatus || "بصحة جيدة جداً والحمد لله",
       hasDisability: initialData?.hasDisability || false,
-      chronicDiseases: initialData?.chronicDiseases || "",
+      religion: initialData?.religion || "مسلم",
+      christianDenomination: initialData?.christianDenomination || "أرثوذكسي",
+      churchAttendance: initialData?.churchAttendance || "مواظب على حضور القداسات أسبوعياً",
       religiousCommitment: initialData?.religiousCommitment || "ملتزم متوسط يسعى للأفضل",
       prayers: initialData?.prayers || "أصلي كل الصلوات في وقتها والحمد لله",
       hasBeard: gender === Gender.MALE ? true : null,
@@ -65,11 +69,13 @@ export const StepProfileForm: React.FC<StepProfileFormProps> = ({
       mahrOpinion: initialData?.mahrOpinion || "موضوع خاضع للاتفاق والنقاش المرن",
       marriageTimeframe: initialData?.marriageTimeframe || "خلال سنة على الأكثر",
       marriageReadiness: initialData?.marriageReadiness || "مستعد تماماً وجاهز من كافة الجوانب (السكن والإمكانيات جاهزة)",
-      shariaVisionStance: initialData?.shariaVisionStance || "أؤيد الرؤية الشرعية بوجود محرم في أقرب فرصة",
+      shariaVisionStance: initialData?.shariaVisionStance || "أؤيد اللقاء والتعارف الرسمي بوجود الأهل في أقرب فرصة",
       aboutMe: initialData?.aboutMe || "",
       partnerSpecs: initialData?.partnerSpecs || "",
     },
   });
+
+  const selectedReligion = watch("religion") || "مسلم";
 
   const aboutMeText = watch("aboutMe") || "";
   const partnerSpecsText = watch("partnerSpecs") || "";
@@ -296,36 +302,94 @@ export const StepProfileForm: React.FC<StepProfileFormProps> = ({
               </Select>
 
               <Select
-                label="مستوى الالتزام الديني"
-                error={errors.religiousCommitment?.message}
-                {...register("religiousCommitment")}
+                label="الديانة"
+                required
+                error={errors.religion?.message}
+                {...register("religion")}
               >
-                {ReligiousCommitmentLevels.map((r) => (
-                  <option key={r} value={r}>{r}</option>
+                {ReligionsList.map((rel) => (
+                  <option key={rel} value={rel}>{rel}</option>
                 ))}
               </Select>
 
-              <Select
-                label="المحافظة على الصلاة"
-                error={errors.prayers?.message}
-                {...register("prayers")}
-              >
-                {PrayersCommitment.map((p) => (
-                  <option key={p} value={p}>{p}</option>
-                ))}
-              </Select>
+              {selectedReligion === "مسيحي" ? (
+                <>
+                  <Select
+                    label="المذهب / الطائفة"
+                    required
+                    error={errors.christianDenomination?.message}
+                    {...register("christianDenomination")}
+                  >
+                    {ChristianDenominationsList.map((den) => (
+                      <option key={den} value={den}>{den}</option>
+                    ))}
+                  </Select>
 
-              {gender === Gender.FEMALE && (
-                <Select
-                  label="الحجاب / الالتزام بالزي"
-                  error={errors.hijabType?.message}
-                  {...register("hijabType")}
-                >
-                  <option value={HijabType.HIJAB}>حجاب شرعي</option>
-                  <option value={HijabType.KHIMAR}>خمار</option>
-                  <option value={HijabType.NIQAB}>نقاب</option>
-                  <option value={HijabType.NONE}>غير محجبة</option>
-                </Select>
+                  <Select
+                    label="الالتزام الكنسي والروحي"
+                    error={errors.religiousCommitment?.message}
+                    {...register("religiousCommitment")}
+                  >
+                    {ChristianReligiousCommitmentLevels.map((r) => (
+                      <option key={r} value={r}>{r}</option>
+                    ))}
+                  </Select>
+
+                  <Select
+                    label="حضور القداسات والتناول والصلوات"
+                    error={errors.prayers?.message}
+                    {...register("prayers")}
+                  >
+                    {ChristianPrayersCommitment.map((p) => (
+                      <option key={p} value={p}>{p}</option>
+                    ))}
+                  </Select>
+
+                  <Select
+                    label="الخدمة والأنشطة الكنسية"
+                    error={errors.churchAttendance?.message}
+                    {...register("churchAttendance")}
+                  >
+                    {ChurchAttendanceOptions.map((c) => (
+                      <option key={c} value={c}>{c}</option>
+                    ))}
+                  </Select>
+                </>
+              ) : (
+                <>
+                  <Select
+                    label="مستوى الالتزام الديني"
+                    error={errors.religiousCommitment?.message}
+                    {...register("religiousCommitment")}
+                  >
+                    {ReligiousCommitmentLevels.map((r) => (
+                      <option key={r} value={r}>{r}</option>
+                    ))}
+                  </Select>
+
+                  <Select
+                    label="المحافظة على الصلاة"
+                    error={errors.prayers?.message}
+                    {...register("prayers")}
+                  >
+                    {PrayersCommitment.map((p) => (
+                      <option key={p} value={p}>{p}</option>
+                    ))}
+                  </Select>
+
+                  {gender === Gender.FEMALE && (
+                    <Select
+                      label="الحجاب / الالتزام بالزي"
+                      error={errors.hijabType?.message}
+                      {...register("hijabType")}
+                    >
+                      <option value={HijabType.HIJAB}>حجاب شرعي</option>
+                      <option value={HijabType.KHIMAR}>خمار</option>
+                      <option value={HijabType.NIQAB}>نقاب</option>
+                      <option value={HijabType.NONE}>غير محجبة</option>
+                    </Select>
+                  )}
+                </>
               )}
 
               <Select

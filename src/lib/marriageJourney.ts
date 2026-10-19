@@ -162,6 +162,21 @@ export const APOLOGY_TEMPLATES: PoliteApologyTemplate[] = [
     title: "أمانة ووضوح بعدم إضاعة الوقت",
     content: "السلام عليكم، رأيت أنه من الأمانة والوضوح والصدق ألا نضيع وقتكما المبارك، وأعتذر بلطف عن إكمال المسار سائلاً المولى عز وجل لك التوفيق والخير حيثما كان.",
   },
+  {
+    id: "apology_4",
+    title: "اختلاف في الرؤية المستقبلية أو ظروف الإقامة",
+    content: "السلام عليكم ورحمة الله، تشرفت بمعرفة شخصكم الكريم، ولكن بعد دراسة ومراجعة الظروف والأولويات المستقبلية ومكان الإقامة، شعرت بوجود تفاوت في الرؤية المشتركة. نعتذر بكل أدب ونتمنى لك كل الخير والتوفيق.",
+  },
+  {
+    id: "apology_5",
+    title: "اعتذار بناءً على مشورة ورأي الأسرة والأهل",
+    content: "السلام عليكم / تحياتي الطيبة، بعد التشاور الأسري ومناقشة الأمر مع الأهل بكل محبة واحترام، رأينا عدم مناسبة الاستمرار في هذا المسار. كل الشكر والتقدير لكم على حسن التواصل وخالص التمنيات لكم بكل الخير والبركة دائماً.",
+  },
+  {
+    id: "apology_6",
+    title: "اعتذار مهذب ببركة وسلام (للمستخدم المسيحي)",
+    content: "تحياتي واحترامي الكامل لشخصك الكريم ولأسرتك الفاضلة، بعد الصلاة والتفكير الهادئ شعرت بعدم التوافق المطلوب بيننا في هذه المرحلة. أعتذر بكل احترام ومحبة عن إكمال التعارف، وخالص دعواتي لك بالسعادة والسلام والبركة في كل خطواتك القادمة.",
+  },
 ];
 
 /**
@@ -179,6 +194,7 @@ export interface MarriageJourneyState {
     preferredTime?: string;
   };
   concludedReason?: string;
+  concludedBy?: string; // معرف الطرف الذي أنهى التعارف بالاعتذار
 }
 
 /**
@@ -236,6 +252,7 @@ export async function syncJourneyToSupabase(myId: string, partnerId: string, sta
       wali_phone: state.waliContact?.phone,
       wali_relation: state.waliContact?.relationship,
       concluded_reason: state.concludedReason,
+      concluded_by: state.concludedBy,
       updated_at: new Date().toISOString(),
     });
   } catch (err) {
@@ -268,6 +285,7 @@ export async function fetchRemoteJourneyState(myId: string, partnerId: string): 
         relationship: data.wali_relation || "الوالد",
       } : undefined,
       concludedReason: data.concluded_reason,
+      concludedBy: data.concluded_by,
     };
     saveJourneyState(parsed);
     return parsed;

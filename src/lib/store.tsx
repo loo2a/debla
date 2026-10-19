@@ -231,6 +231,9 @@ const toProfile = (row: any, priv?: any, sensitive?: any, pref?: any): UserProfi
   hasDisability: sensitive?.has_disability ?? row.has_disability ?? row.hasDisability ?? false,
   chronicDiseases: sensitive?.chronic_diseases ?? row.chronic_diseases ?? row.chronicDiseases ?? "",
   religiousCommitment: row.religious_commitment || row.religiousCommitment,
+  religion: row.religion || row.religion || undefined,
+  christianDenomination: row.christian_denomination || row.christianDenomination || undefined,
+  churchAttendance: row.church_attendance || row.churchAttendance || undefined,
   prayers: row.prayers,
   hasBeard: row.has_beard ?? row.hasBeard ?? null,
   hijabType: row.hijab_type || row.hijabType || null,
@@ -818,6 +821,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (profileData.isSmoker !== undefined) profileData.is_smoker = profileData.isSmoker;
     if (profileData.skinColor) profileData.skin_color = profileData.skinColor;
     if (profileData.bodyBuild) profileData.body_build = profileData.bodyBuild;
+    if (profileData.religion) profileData.religion = profileData.religion;
+    if (profileData.christianDenomination) profileData.christian_denomination = profileData.christianDenomination;
+    if (profileData.churchAttendance) profileData.church_attendance = profileData.churchAttendance;
     if (profileData.religiousCommitment) profileData.religious_commitment = profileData.religiousCommitment;
     if (profileData.hasBeard !== undefined) profileData.has_beard = profileData.hasBeard;
     if (profileData.hijabType !== undefined) profileData.hijab_type = profileData.hijabType;
@@ -1061,6 +1067,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         p_max_age: filter.maxAge,
         p_residence: filter.residence,
         p_nationality: filter.nationality,
+        p_religion: filter.religion,
+        p_christian_denomination: filter.christianDenomination,
         p_marital_status: filter.maritalStatus,
         p_religious_commitment: filter.religiousCommitment,
         p_education: filter.education,
@@ -1096,6 +1104,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const filtered = profiles.filter(p => {
       if (p.id === currentUser?.id) return false;
       if (p.gender !== oppositeGender) return false;
+      // الفلترة الدينية: إظهار المتوافقين دينياً افتراضياً أو حسب الفلتر
+      if (filter.religion && p.religion && p.religion !== filter.religion) return false;
+      if (!filter.religion && currentUser?.religion && p.religion && p.religion !== currentUser.religion) return false;
+      if (filter.christianDenomination && p.christianDenomination !== filter.christianDenomination) return false;
       if (filter.minAge && p.age < filter.minAge) return false;
       if (filter.maxAge && p.age > filter.maxAge) return false;
       if (filter.residence && p.residence !== filter.residence) return false;

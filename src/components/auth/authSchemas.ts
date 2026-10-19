@@ -32,15 +32,18 @@ export const profileFormSchema = z.object({
   chronicDiseases: z.string().optional(),
 
   // Religiosity & Opinions
+  religion: z.string().optional(),
+  christianDenomination: z.string().optional(),
   religiousCommitment: z.string().min(1, "يرجى تحديد مستوى الالتزام الديني"),
-  prayers: z.string().min(1, "يرجى تحديد الالتزام بالصلوات"),
+  prayers: z.string().min(1, "يرجى تحديد الالتزام بالصلوات / العبادات"),
+  churchAttendance: z.string().optional(),
   hasBeard: z.boolean().nullable().optional(),
   hijabType: z.string().nullable().optional(),
   qaImaStance: z.string().min(1, "يرجى تحديد الموقف من القايمة"),
   mahrOpinion: z.string().min(1, "يرجى تحديد الرأي في المهر والشبكة"),
   marriageTimeframe: z.string().min(1, "يرجى تحديد الفترة المتوقعة للزواج"),
   marriageReadiness: z.string().min(1, "يرجى تحديد مدى الاستعداد للزواج").optional(),
-  shariaVisionStance: z.string().min(1, "يرجى تحديد الموقف من الرؤية الشرعية"),
+  shariaVisionStance: z.string().min(1, "يرجى تحديد الموقف من لقاء الرؤية والتعارف"),
 
   // Descriptions (Strict 140 char minimum for seriousness + Contact Leakage Shield)
   aboutMe: z.string().trim()

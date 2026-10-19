@@ -3,7 +3,8 @@ import { SlidersHorizontal, ArrowUpDown, ChevronDown, ChevronUp, Flame, CheckCir
 import {
   Nationalities, Countries, EducationLevels, IncomeLevels,
   SkinColors, BodyBuilds, ReligiousCommitmentLevels,
-  PrayersCommitment, QaImaStances, MahrOpinions, MarriageTimeframes
+  PrayersCommitment, QaImaStances, MahrOpinions, MarriageTimeframes,
+  ReligionsList, ChristianDenominationsList
 } from "../../constants";
 import { Gender, MaritalStatus, HijabType } from "../../types";
 import { RED_FLAG_OPTIONS } from "../CompatibilitySurveyModal";
@@ -11,6 +12,8 @@ import { RED_FLAG_OPTIONS } from "../CompatibilitySurveyModal";
 export interface SearchFilterState {
   nationality: string;
   residence: string;
+  religion: string;
+  christianDenomination: string;
   ageFrom: number;
   ageTo: number;
   maritalStatus: string;
@@ -99,6 +102,36 @@ export const SearchFilters: React.FC<SearchFiltersProps> = ({
             ))}
           </select>
         </div>
+
+        <div className="space-y-1">
+          <label className="text-xs font-bold text-slate-600 block">الديانة</label>
+          <select
+            value={filter.religion}
+            onChange={(e) => onChange((prev) => ({ ...prev, religion: e.target.value }))}
+            className="w-full bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-2 text-xs text-slate-800 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+          >
+            <option value="all">كل الأديان</option>
+            {ReligionsList.map((rel) => (
+              <option key={rel} value={rel}>{rel}</option>
+            ))}
+          </select>
+        </div>
+
+        {filter.religion === "مسيحي" && (
+          <div className="space-y-1">
+            <label className="text-xs font-bold text-slate-600 block">المذهب / الطائفة</label>
+            <select
+              value={filter.christianDenomination}
+              onChange={(e) => onChange((prev) => ({ ...prev, christianDenomination: e.target.value }))}
+              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-2 text-xs text-slate-800 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+            >
+              <option value="all">كل الطوائف</option>
+              {ChristianDenominationsList.map((den) => (
+                <option key={den} value={den}>{den}</option>
+              ))}
+            </select>
+          </div>
+        )}
 
         <div className="space-y-1">
           <label className="text-xs font-bold text-slate-600 block">الحالة الاجتماعية</label>

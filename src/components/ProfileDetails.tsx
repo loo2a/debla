@@ -665,29 +665,64 @@ export const ProfileDetails: React.FC<ProfileDetailsProps> = ({
 
         {/* Section 5: Religious specifications */}
         <div className="bg-white rounded-3xl border border-slate-100 p-6 shadow-sm space-y-4">
-          <h4 className="font-extrabold text-slate-800 text-sm border-r-4 border-slate-600 pr-2">بيانات التدين والصلوات والزي</h4>
+          <h4 className="font-extrabold text-slate-800 text-sm border-r-4 border-slate-600 pr-2">
+            {profile.religion === "مسيحي" ? "البيانات الروحية والكنسية" : "بيانات التدين والصلوات والزي"}
+          </h4>
           
           <div className="grid grid-cols-2 gap-4 text-xs">
             <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
-              <span className="text-[10px] text-slate-400 block font-semibold">درجة الالتزام الديني</span>
-              <span className="font-bold text-slate-800">{profile.religiousCommitment}</span>
+              <span className="text-[10px] text-slate-400 block font-semibold">الديانة</span>
+              <span className="font-bold text-slate-800">{profile.religion || "مسلم"}</span>
             </div>
 
-            <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
-              <span className="text-[10px] text-slate-400 block font-semibold">المحافظة على الصلاة</span>
-              <span className="font-bold text-slate-800">{profile.prayers}</span>
-            </div>
+            {profile.religion === "مسيحي" ? (
+              <>
+                <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
+                  <span className="text-[10px] text-slate-400 block font-semibold">المذهب / الطائفة</span>
+                  <span className="font-bold text-slate-800">{profile.christianDenomination || "أرثوذكسي"}</span>
+                </div>
 
-            {profile.gender === Gender.MALE ? (
-              <div className="bg-slate-50 p-3 rounded-xl border border-slate-100 md:col-span-2">
-                <span className="text-[10px] text-slate-400 block font-semibold">اللحية</span>
-                <span className="font-bold text-slate-800">{profile.hasBeard ? "نعم (ملتحي)" : "لا يوجد"}</span>
-              </div>
+                <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
+                  <span className="text-[10px] text-slate-400 block font-semibold">الالتزام الروحي والكنسي</span>
+                  <span className="font-bold text-slate-800">{profile.religiousCommitment}</span>
+                </div>
+
+                <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
+                  <span className="text-[10px] text-slate-400 block font-semibold">القداسات والتناول والصلوات</span>
+                  <span className="font-bold text-slate-800">{profile.prayers}</span>
+                </div>
+
+                {profile.churchAttendance && (
+                  <div className="bg-slate-50 p-3 rounded-xl border border-slate-100 md:col-span-2">
+                    <span className="text-[10px] text-slate-400 block font-semibold">الخدمة والأنشطة الكنسية</span>
+                    <span className="font-bold text-slate-800">{profile.churchAttendance}</span>
+                  </div>
+                )}
+              </>
             ) : (
-              <div className="bg-slate-50 p-3 rounded-xl border border-slate-100 md:col-span-2">
-                <span className="text-[10px] text-slate-400 block font-semibold">نوع الحجاب الشرعي</span>
-                <span className="font-bold text-slate-800">{profile.hijabType || HijabType.HIJAB}</span>
-              </div>
+              <>
+                <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
+                  <span className="text-[10px] text-slate-400 block font-semibold">درجة الالتزام الديني</span>
+                  <span className="font-bold text-slate-800">{profile.religiousCommitment}</span>
+                </div>
+
+                <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
+                  <span className="text-[10px] text-slate-400 block font-semibold">المحافظة على الصلاة</span>
+                  <span className="font-bold text-slate-800">{profile.prayers}</span>
+                </div>
+
+                {profile.gender === Gender.MALE ? (
+                  <div className="bg-slate-50 p-3 rounded-xl border border-slate-100 md:col-span-2">
+                    <span className="text-[10px] text-slate-400 block font-semibold">اللحية</span>
+                    <span className="font-bold text-slate-800">{profile.hasBeard ? "نعم (ملتحي)" : "لا يوجد"}</span>
+                  </div>
+                ) : (
+                  <div className="bg-slate-50 p-3 rounded-xl border border-slate-100 md:col-span-2">
+                    <span className="text-[10px] text-slate-400 block font-semibold">نوع الحجاب الشرعي</span>
+                    <span className="font-bold text-slate-800">{profile.hijabType || HijabType.HIJAB}</span>
+                  </div>
+                )}
+              </>
             )}
           </div>
         </div>

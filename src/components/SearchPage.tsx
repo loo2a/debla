@@ -32,6 +32,8 @@ export const SearchPage: React.FC<SearchPageProps> = ({ onSelectProfile }) => {
   const [filter, setFilter] = useState<SearchFilterState>({
     nationality: "all",
     residence: "all",
+    religion: currentUser.religion || "all",
+    christianDenomination: currentUser.christianDenomination || "all",
     ageFrom: 18,
     ageTo: 65,
     maritalStatus: "all",
@@ -76,6 +78,8 @@ export const SearchPage: React.FC<SearchPageProps> = ({ onSelectProfile }) => {
           maxAge: filter.ageTo,
           nationality: filter.nationality === "all" ? undefined : filter.nationality,
           residence: filter.residence === "all" ? undefined : filter.residence,
+          religion: filter.religion === "all" ? undefined : filter.religion,
+          christianDenomination: filter.christianDenomination === "all" ? undefined : filter.christianDenomination,
           maritalStatus: filter.maritalStatus === "all" ? undefined : filter.maritalStatus,
           religiousCommitment: filter.isAdvanced && filter.religiosity !== "all" ? filter.religiosity : undefined,
           education: filter.isAdvanced && filter.education !== "all" ? filter.education : undefined,
@@ -158,6 +162,8 @@ export const SearchPage: React.FC<SearchPageProps> = ({ onSelectProfile }) => {
                   setFilter({
                     nationality: "all",
                     residence: "all",
+                    religion: currentUser.religion || "all",
+                    christianDenomination: currentUser.christianDenomination || "all",
                     ageFrom: 18,
                     ageTo: 65,
                     maritalStatus: "all",

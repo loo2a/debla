@@ -9,6 +9,18 @@ export enum MaritalStatus {
   DIVORCED = "مطلق"
 }
 
+export enum Religion {
+  ISLAM = "مسلم",
+  CHRISTIANITY = "مسيحي"
+}
+
+export enum ChristianDenomination {
+  ORTHODOX = "أرثوذكسي",
+  CATHOLIC = "كاثوليكي",
+  EVANGELICAL = "إنجيلي / بروتستانتي",
+  OTHER = "طائفة أخرى"
+}
+
 export enum HijabType {
   HIJAB = "حجاب",
   NIQAB = "نقاب",
@@ -69,11 +81,14 @@ export interface UserProfile {
   hasDisability: boolean;
   chronicDiseases: string;
   
-  // Religiosity
+  // Religiosity & Faith
+  religion?: Religion; // مسلم أو مسيحي
+  christianDenomination?: ChristianDenomination; // أرثوذكسي / كاثوليكي / إنجيلي
   religiousCommitment: string;
-  prayers: string;
+  prayers: string; // الصلاة (مسلم) أو الصلوات والتناول/القداسات (مسيحي)
+  churchAttendance?: string; // الحضور الكنسي والتناول (للمسيحيين)
   hasBeard: boolean | null; // For males
-  hijabType: HijabType | null; // For females
+  hijabType: HijabType | null; // For females (مسلمات)
 
   // Matrimonial Opinions
   qaImaStance: string; // Stance on Marriage List (القايمة)
@@ -225,6 +240,8 @@ export interface SearchProfilesFilter {
   maxAge?: number;
   residence?: string;
   nationality?: string;
+  religion?: Religion | string;
+  christianDenomination?: ChristianDenomination | string;
   maritalStatus?: string;
   religiousCommitment?: string;
   education?: string;
