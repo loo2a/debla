@@ -51,6 +51,7 @@ const PageLoadingFallback: React.FC = () => (
 );
 
 const AppContent: React.FC = () => {
+  const location = useLocation();
   const { currentUser, isAuthReady, dbError, retryLoadData, logout } = useApp();
   const { isSidebarOpen, setSidebarOpen, isReviewModalOpen, closeReviewModal } = useUIStore();
 
@@ -58,19 +59,26 @@ const AppContent: React.FC = () => {
   useEdgeSwipe();
 
   useEffect(() => {
+    let unbindBack: (() => void) | undefined;
     if (isAuthReady) {
       void NativeBridge.hideSplashScreen();
-      NativeBridge.setupBackButton(() => {
+      void NativeBridge.setupBackButton(() => {
         if (window.location.pathname === "/" || window.location.pathname === "") {
-          // Native exit handled by OS
+          void NativeBridge.exitApp();
         } else {
           window.history.back();
         }
+      }).then((cleanup) => {
+        unbindBack = cleanup;
       });
+
       if (currentUser?.id) {
         void NativeBridge.initPushNotifications(currentUser.id);
       }
     }
+    return () => {
+      unbindBack?.();
+    };
   }, [isAuthReady, currentUser?.id]);
 
   // Waiting for Supabase to restore the session
@@ -102,8 +110,6 @@ const AppContent: React.FC = () => {
       </div>
     );
   }
-
-  const location = useLocation();
 
   // Not logged in, or onboarding (charter / profile) not finished yet
   if (!currentUser || !currentUser.agreedToCharter || !currentUser.name) {

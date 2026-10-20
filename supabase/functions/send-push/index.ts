@@ -77,6 +77,31 @@ Deno.serve(async (req) => {
   }
 
   try {
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader) {
+      return new Response(JSON.stringify({ error: "Missing Authorization header" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    // التحقق الأمني من هوية المستدعي (يمنع المتطفلين والمفتاح العام من إرسال إشعارات)
+    const token = authHeader.replace(/^Bearer\s+/i, "");
+    const isServiceRole = token === supabaseServiceKey;
+    if (!isServiceRole) {
+      const { data: authUser, error: authErr } = await supabase.auth.getUser(token);
+      if (authErr || !authUser?.user) {
+        return new Response(JSON.stringify({ error: "Unauthorized: Invalid or expired auth token" }), {
+          status: 401,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+    }
+
     const { userId, title, body, data } = await req.json();
 
     if (!userId || !title) {
@@ -85,10 +110,6 @@ Deno.serve(async (req) => {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
-
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     // 1. البحث عن توكن هاتف المستخدم
     const { data: sub, error: subErr } = await supabase

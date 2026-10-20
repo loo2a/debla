@@ -29,17 +29,35 @@ export class NativeBridge {
   }
 
   /**
-   * تفعيل زر الرجوع المادي لهواتف أندرويد
+   * تفعيل زر الرجوع المادي لهواتف أندرويد مع منع تراكم المستمعين
    */
-  public static setupBackButton(onNavigateBack: () => void): void {
+  public static async setupBackButton(onNavigateBack: () => void): Promise<() => void> {
     if (this.isNative()) {
-      CapApp.addListener("backButton", ({ canGoBack }) => {
-        if (canGoBack) {
-          window.history.back();
-        } else {
-          onNavigateBack();
-        }
-      });
+      try {
+        await CapApp.removeAllListeners();
+        const handle = await CapApp.addListener("backButton", ({ canGoBack }) => {
+          if (canGoBack) {
+            window.history.back();
+          } else {
+            onNavigateBack();
+          }
+        });
+        return () => { void handle.remove(); };
+      } catch {
+        return () => {};
+      }
+    }
+    return () => {};
+  }
+
+  /**
+   * إغلاق التطبيق نهائياً على أندرويد
+   */
+  public static async exitApp(): Promise<void> {
+    if (this.isNative()) {
+      try {
+        await CapApp.exitApp();
+      } catch {}
     }
   }
 
@@ -98,12 +116,12 @@ export class NativeBridge {
           resolve(null);
         });
 
-        // 4. معالجة النقر على الإشعار للانتقال للمحادثة
+        // 4. معالجة النقر على الإشعار للانتقال للمحادثة في تطبيق BrowserRouter
         PushNotifications.addListener("pushNotificationActionPerformed", (notification: ActionPerformed) => {
           const data = notification.notification.data;
           if (data?.chatUserId) {
-            window.location.hash = `#/inbox/${data.chatUserId}`;
-          } else if (data?.url) {
+            window.location.href = `/inbox/${encodeURIComponent(data.chatUserId)}`;
+          } else if (data?.url && typeof data.url === "string" && data.url.startsWith("/")) {
             window.location.href = data.url;
           }
         });

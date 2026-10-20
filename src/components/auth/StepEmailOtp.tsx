@@ -226,13 +226,6 @@ export const StepEmailOtp: React.FC = () => {
                 >
                   إرسال رمز التحقق
                 </Button>
-
-                {/* Reviewer / Demo Note */}
-                <div className="p-3 bg-slate-50 rounded-2xl border border-slate-100 text-center">
-                  <p className="text-[11px] text-slate-500 leading-relaxed">
-                    💡 <span className="font-bold text-slate-700">للمعاينة السريعة:</span> يمكنك استخدام البريد التجريبي <code className="text-emerald-700 font-mono text-[10px] bg-emerald-50 px-1 py-0.5 rounded">reviewer@mawada-rahma.com</code> مع الرمز <code className="text-emerald-700 font-mono text-[10px] bg-emerald-50 px-1 py-0.5 rounded">123456</code>.
-                  </p>
-                </div>
               </form>
             </div>
           ) : (

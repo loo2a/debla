@@ -4,14 +4,17 @@ import { Trash2, AlertTriangle, ArrowRight, CheckCircle2, ShieldCheck, Mail } fr
 import { Button } from "../components/ui/Button";
 import { Input } from "../components/ui/Input";
 import { useApp } from "../lib/store";
+import { supabase } from "../lib/supabase";
 
 export const DeleteAccountPage: React.FC = () => {
   const navigate = useNavigate();
   const { currentUser, deleteMyAccount, cancelAccountDeletion } = useApp();
 
   const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
   const [reason, setReason] = useState("");
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [isSubmittingWeb, setIsSubmittingWeb] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isCancelling, setIsCancelling] = useState(false);
   const [directDeleteError, setDirectDeleteError] = useState<string | null>(null);
@@ -55,10 +58,27 @@ export const DeleteAccountPage: React.FC = () => {
     }
   };
 
-  const handleWebFormSubmit = (e: React.FormEvent) => {
+  const handleWebFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email.trim()) return;
-    setIsSubmitted(true);
+    setIsSubmittingWeb(true);
+    setDirectDeleteError(null);
+    try {
+      const { error } = await supabase.from("account_deletion_requests").insert({
+        email: email.trim().toLowerCase(),
+        phone: phone.trim(),
+        reason: reason.trim(),
+      });
+      if (error) {
+        setDirectDeleteError("تعذر إرسال الطلب حالياً، يرجى المحاولة لاحقاً.");
+      } else {
+        setIsSubmitted(true);
+      }
+    } catch {
+      setDirectDeleteError("حدث خطأ في الاتصال بالسيرفر.");
+    } finally {
+      setIsSubmittingWeb(false);
+    }
   };
 
   return (

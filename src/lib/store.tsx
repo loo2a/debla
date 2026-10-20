@@ -377,14 +377,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         supabase.from("profile_private").select("*"),
         Promise.resolve(supabase.from("profile_sensitive").select("*")).catch(() => ({ data: [] } as any)),
         Promise.resolve(supabase.from("profile_preferences").select("*")).catch(() => ({ data: [] } as any)),
-        supabase.from("messages").select("*").order("timestamp", { ascending: true }),
-        supabase.from("notifications").select("*").order("timestamp", { ascending: false }),
-        supabase.from("interactions").select("*"),
-        supabase.from("premium_requests").select("*").order("timestamp", { ascending: false }),
-        supabase.from("success_stories").select("*").order("date", { ascending: false }),
-        Promise.resolve(supabase.from("compatibility_surveys").select("*")).catch(() => ({ data: [] } as any)),
-        Promise.resolve(supabase.from("profile_edit_requests").select("*").order("created_at", { ascending: false })).catch(() => ({ data: [] } as any)),
-        Promise.resolve(supabase.from("coupons").select("*").order("created_at", { ascending: false })).catch(() => ({ data: [] } as any)),
+        supabase.from("messages").select("*").order("timestamp", { ascending: true }).limit(500),
+        supabase.from("notifications").select("*").order("timestamp", { ascending: false }).limit(100),
+        supabase.from("interactions").select("*").limit(500),
+        supabase.from("premium_requests").select("*").order("timestamp", { ascending: false }).limit(50),
+        supabase.from("success_stories").select("*").order("date", { ascending: false }).limit(20),
+        Promise.resolve(supabase.from("compatibility_surveys").select("*").limit(100)).catch(() => ({ data: [] } as any)),
+        Promise.resolve(supabase.from("profile_edit_requests").select("*").order("created_at", { ascending: false }).limit(50)).catch(() => ({ data: [] } as any)),
+        Promise.resolve(supabase.from("coupons").select("*").order("created_at", { ascending: false }).limit(50)).catch(() => ({ data: [] } as any)),
       ]);
 
       const firstError = [
@@ -679,12 +679,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const requestEmailOtp = async (email: string): Promise<ActionResult> => {
     const cleanEmail = email.trim().toLowerCase();
 
-    // 1. Google Play Reviewer Test Account Bypass
-    if (cleanEmail === "reviewer@mawada-rahma.com" || cleanEmail === "demo@mawada-rahma.com") {
-      return { ok: true };
-    }
-
-    // 2. Cooldown check (60s between OTP requests)
+    // 1. Cooldown check (60s between OTP requests)
     const lastRequest = Number(sessionStorage.getItem(`otp_request_${cleanEmail}`) || "0");
     const now = Date.now();
     if (now - lastRequest < 60000) {
@@ -705,17 +700,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const verifyEmailOtp = async (email: string, code: string): Promise<ActionResult> => {
     const cleanEmail = email.trim().toLowerCase();
     const cleanCode = code.trim();
-
-    // 1. Google Play Reviewer Test Account Bypass (fixed code: 123456)
-    if ((cleanEmail === "reviewer@mawada-rahma.com" || cleanEmail === "demo@mawada-rahma.com") && cleanCode === "123456") {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email: cleanEmail,
-        password: "ReviewerPassword2026!",
-      });
-      if (!error && data.user) {
-        return { ok: true };
-      }
-    }
 
     const { error } = await supabase.auth.verifyOtp({
       email: cleanEmail,
@@ -810,46 +794,70 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
 
     const mobile = updatedData.mobile?.trim();
-    const profileData: Record<string, unknown> = { ...updatedData };
-    SERVER_MANAGED_KEYS.forEach(key => delete profileData[key]);
+    
+    // بناء كائن قاعدة البيانات بدقة وفق أسماء الأعمدة المعتمدة فقط (منع إرسال مفاتيح غير موجودة)
+    const dbPayload: Record<string, unknown> = {};
 
-    // دعم snake_case
-    if (profileData.accountRole) profileData.account_role = profileData.accountRole;
-    if (profileData.maritalStatus) profileData.marital_status = profileData.maritalStatus;
-    if (profileData.hasChildren !== undefined) profileData.has_children = profileData.hasChildren;
-    if (profileData.childrenCount !== undefined) profileData.children_count = profileData.childrenCount;
-    if (profileData.isSmoker !== undefined) profileData.is_smoker = profileData.isSmoker;
-    if (profileData.skinColor) profileData.skin_color = profileData.skinColor;
-    if (profileData.bodyBuild) profileData.body_build = profileData.bodyBuild;
-    if (profileData.religion) profileData.religion = profileData.religion;
-    if (profileData.christianDenomination) profileData.christian_denomination = profileData.christianDenomination;
-    if (profileData.churchAttendance) profileData.church_attendance = profileData.churchAttendance;
-    if (profileData.religiousCommitment) profileData.religious_commitment = profileData.religiousCommitment;
-    if (profileData.hasBeard !== undefined) profileData.has_beard = profileData.hasBeard;
-    if (profileData.hijabType !== undefined) profileData.hijab_type = profileData.hijabType;
-    if (profileData.qaImaStance) profileData.qa_ima_stance = profileData.qaImaStance;
-    if (profileData.mahrOpinion) profileData.mahr_opinion = profileData.mahrOpinion;
-    if (profileData.marriageTimeframe) profileData.marriage_timeframe = profileData.marriageTimeframe;
-    if (profileData.marriageReadiness) profileData.marriage_readiness = profileData.marriageReadiness;
-    if (profileData.shariaVisionStance) profileData.sharia_vision_stance = profileData.shariaVisionStance;
-    if (profileData.aboutMe) profileData.about_me = profileData.aboutMe;
-    if (profileData.partnerSpecs) profileData.partner_specs = profileData.partnerSpecs;
-    if (profileData.photoPrivacy) profileData.photo_privacy = profileData.photoPrivacy;
-    if (profileData.incognitoMode !== undefined) profileData.incognito_mode = profileData.incognitoMode;
-    if (profileData.isMarriageCertified !== undefined) profileData.is_marriage_certified = profileData.isMarriageCertified;
-    if (profileData.marriageCertificateDate) profileData.marriage_certificate_date = profileData.marriageCertificateDate;
-    if (profileData.marriageExamScore !== undefined) profileData.marriage_exam_score = profileData.marriageExamScore;
+    if (updatedData.name !== undefined) dbPayload.name = updatedData.name;
+    if (updatedData.gender !== undefined) dbPayload.gender = updatedData.gender;
+    if (updatedData.avatar !== undefined) dbPayload.avatar = updatedData.avatar;
+    if (updatedData.age !== undefined) dbPayload.age = updatedData.age;
+    if (updatedData.nationality !== undefined) dbPayload.nationality = updatedData.nationality;
+    if (updatedData.residence !== undefined) dbPayload.residence = updatedData.residence;
+    if (updatedData.profession !== undefined) dbPayload.profession = updatedData.profession;
+    if (updatedData.education !== undefined) dbPayload.education = updatedData.education;
+    if (updatedData.income !== undefined) dbPayload.income = updatedData.income;
+    if (updatedData.height !== undefined) dbPayload.height = updatedData.height;
+    if (updatedData.weight !== undefined) dbPayload.weight = updatedData.weight;
+    if (updatedData.hobbies !== undefined) dbPayload.hobbies = updatedData.hobbies;
+    if (updatedData.healthStatus !== undefined) dbPayload.health_status = updatedData.healthStatus;
+    if (updatedData.hasDisability !== undefined) dbPayload.has_disability = updatedData.hasDisability;
+    if (updatedData.chronicDiseases !== undefined) dbPayload.chronic_diseases = updatedData.chronicDiseases;
+
+    // الحقول بنمط snake_case
+    if (updatedData.accountRole !== undefined) dbPayload.account_role = updatedData.accountRole;
+    if (updatedData.maritalStatus !== undefined) dbPayload.marital_status = updatedData.maritalStatus;
+    if (updatedData.hasChildren !== undefined) dbPayload.has_children = updatedData.hasChildren;
+    if (updatedData.childrenCount !== undefined) dbPayload.children_count = updatedData.childrenCount;
+    if (updatedData.isSmoker !== undefined) dbPayload.is_smoker = updatedData.isSmoker;
+    if (updatedData.skinColor !== undefined) dbPayload.skin_color = updatedData.skinColor;
+    if (updatedData.bodyBuild !== undefined) dbPayload.body_build = updatedData.bodyBuild;
+    if (updatedData.religion !== undefined) dbPayload.religion = updatedData.religion;
+    if (updatedData.christianDenomination !== undefined) dbPayload.christian_denomination = updatedData.christianDenomination;
+    if (updatedData.churchAttendance !== undefined) dbPayload.church_attendance = updatedData.churchAttendance;
+    if (updatedData.religiousCommitment !== undefined) dbPayload.religious_commitment = updatedData.religiousCommitment;
+    if (updatedData.prayers !== undefined) dbPayload.prayers = updatedData.prayers;
+    if (updatedData.hasBeard !== undefined) dbPayload.has_beard = updatedData.hasBeard;
+    if (updatedData.hijabType !== undefined) dbPayload.hijab_type = updatedData.hijabType;
+    if (updatedData.qaImaStance !== undefined) dbPayload.qa_ima_stance = updatedData.qaImaStance;
+    if (updatedData.mahrOpinion !== undefined) dbPayload.mahr_opinion = updatedData.mahrOpinion;
+    if (updatedData.marriageTimeframe !== undefined) dbPayload.marriage_timeframe = updatedData.marriageTimeframe;
+    if (updatedData.marriageReadiness !== undefined) dbPayload.marriage_readiness = updatedData.marriageReadiness;
+    if (updatedData.shariaVisionStance !== undefined) dbPayload.sharia_vision_stance = updatedData.shariaVisionStance;
+    if (updatedData.aboutMe !== undefined) dbPayload.about_me = updatedData.aboutMe;
+    if (updatedData.partnerSpecs !== undefined) dbPayload.partner_specs = updatedData.partnerSpecs;
+    if (updatedData.photoPrivacy !== undefined) dbPayload.photo_privacy = updatedData.photoPrivacy;
+    if (updatedData.incognitoMode !== undefined) dbPayload.incognito_mode = updatedData.incognitoMode;
+    if (updatedData.isMarriageCertified !== undefined) dbPayload.is_marriage_certified = updatedData.isMarriageCertified;
+    if (updatedData.marriageCertificateDate !== undefined) dbPayload.marriage_certificate_date = updatedData.marriageCertificateDate;
+    if (updatedData.marriageExamScore !== undefined) dbPayload.marriage_exam_score = updatedData.marriageExamScore;
+
+    // استبعاد أي حقول سيرفرية حساسة من التعديل المباشر
+    SERVER_MANAGED_KEYS.forEach(key => {
+      delete dbPayload[key];
+    });
 
     let merged: UserProfile = { ...currentUser, ...updatedData };
 
-    if (Object.keys(profileData).length > 0) {
+    if (Object.keys(dbPayload).length > 0) {
       const { data, error } = await supabase
         .from("profiles")
-        .upsert({ id: currentUser.id, ...profileData })
+        .update(dbPayload)
+        .eq("id", currentUser.id)
         .select()
         .single();
       if (error) return fail(error);
-      merged = { ...merged, ...toProfile(data) };
+      if (data) merged = { ...merged, ...toProfile(data) };
     }
 
     // حفظ في جداول البيانات الحساسة والتفضيلات
@@ -876,7 +884,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (mobile !== undefined && mobile !== currentUser.mobile) {
       const { error } = await supabase
         .from("profile_private")
-        .upsert({ id: currentUser.id, mobile });
+        .update({ mobile })
+        .eq("id", currentUser.id);
       if (error) return fail(error);
       merged = { ...merged, mobile, isMobileVerified: false };
     }
@@ -1300,11 +1309,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const requestTierVerification = async (tier: VerificationTierType, details?: string): Promise<ActionResult> => {
     if (!currentUser) return { ok: false, error: "يجب تسجيل الدخول أولاً." };
 
-    if (tier === "phone") {
-      setCurrentUser(prev => prev ? { ...prev, isMobileVerified: true } : prev);
-      return { ok: true };
-    }
-
     const tierLabels: Record<VerificationTierType, string> = {
       phone: "توثيق رقم الهاتف",
       photo: "مطابقة الصورة الشخصية",
@@ -1313,16 +1317,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
 
     try {
-      await supabase.from("notifications").insert({
+      const { error } = await supabase.from("notifications").insert({
         userId: currentUser.id,
         type: "verify_request",
         senderId: currentUser.id,
         senderName: currentUser.name,
         content: `طلب توثيق جديد: (${tierLabels[tier]})${details ? ` - تفاصيل: ${details}` : ""}`,
       });
-    } catch {}
-
-    return { ok: true };
+      if (error) return fail(error);
+      return { ok: true };
+    } catch (err) {
+      return fail(err);
+    }
   };
 
   const adminUpdateTierVerification = async (userId: string, tier: VerificationTierType, verified: boolean): Promise<ActionResult> => {
@@ -1335,11 +1341,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     const fieldName = fieldMap[tier];
     try {
-      await supabase
+      const { error } = await supabase
         .from("profiles")
         .update({ [fieldName]: verified, ...(tier === "id" ? { is_verified: verified } : {}) })
         .eq("id", userId);
-    } catch {}
+      if (error) return fail(error);
+    } catch (err) {
+      return fail(err);
+    }
 
     setProfiles(prev => prev.map(p => {
       if (p.id !== userId) return p;

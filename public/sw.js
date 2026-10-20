@@ -99,10 +99,19 @@ self.addEventListener("push", (event) => {
   );
 });
 
-// Notification Click Event: Focus existing window or open app
+// Notification Click Event: Focus existing window or open app (Protected against open redirect)
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
-  const targetUrl = event.notification.data?.url || "/";
+  let targetUrl = "/";
+  try {
+    const rawUrl = event.notification.data?.url;
+    if (rawUrl) {
+      const parsed = new URL(rawUrl, self.location.origin);
+      if (parsed.origin === self.location.origin) {
+        targetUrl = parsed.pathname + parsed.search + parsed.hash;
+      }
+    }
+  } catch {}
 
   event.waitUntil(
     clients.matchAll({ type: "window", includeUncontrolled: true }).then((clientList) => {
