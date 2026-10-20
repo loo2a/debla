@@ -25,6 +25,11 @@ export const SearchPage: React.FC<SearchPageProps> = ({ onSelectProfile }) => {
     navigate(`/profile/${userId}`);
   };
 
+  const handleIgnoreProfile = (userId: string) => {
+    setResults((prev) => prev.filter((p) => p.id !== userId));
+    setTotalCount((prev) => Math.max(0, prev - 1));
+  };
+
   if (!currentUser) return null;
 
   const oppositeGender = currentUser.gender === Gender.MALE ? Gender.FEMALE : Gender.MALE;
@@ -145,6 +150,17 @@ export const SearchPage: React.FC<SearchPageProps> = ({ onSelectProfile }) => {
             {totalPages > 1 && <span>صفحة {currentPage} من {totalPages}</span>}
           </div>
 
+          {!isSearching && results.length > 0 && (
+            <div className="bg-emerald-50/70 border border-emerald-100/90 rounded-2xl px-3.5 py-2 flex items-center justify-between text-xs text-emerald-800 shadow-2xs">
+              <span className="flex items-center gap-2">
+                <span>💡</span>
+                <span className="font-semibold text-[11px]">
+                  اسحب أي بطاقة من اليسار لليمين للخيارات السريعة (اهتمام، مراسلة، تجاهل، إبلاغ).
+                </span>
+              </span>
+            </div>
+          )}
+
           {isSearching ? (
             <div className="space-y-3">
               <ProfileCardSkeleton />
@@ -214,6 +230,7 @@ export const SearchPage: React.FC<SearchPageProps> = ({ onSelectProfile }) => {
                   <SearchProfileCard
                     profile={p}
                     onClick={() => handleCardClick(p.id)}
+                    onIgnore={handleIgnoreProfile}
                   />
                 </LazyCard>
               ))}
