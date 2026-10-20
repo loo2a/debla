@@ -110,7 +110,7 @@ export const StepEmailOtp: React.FC = () => {
             </div>
 
             <span className="mt-2 text-[10px] font-bold tracking-widest text-amber-200 uppercase bg-emerald-950/60 px-3 py-0.5 rounded-full border border-amber-300/30">
-              الزواج الشرعي
+              زواج جاد ومسؤول
             </span>
           </div>
 
@@ -118,13 +118,13 @@ export const StepEmailOtp: React.FC = () => {
             مَوَدَّةٌ وَرَحْمَة
           </h1>
           <p className="text-xs text-emerald-100/90 font-medium">
-            المنصة الإسلامية الموثوقة لطلب الحلال
+            المنصة الموثوقة لتيسير الزواج وبناء الأسرة
           </p>
 
-          {/* Quranic Verse */}
+          {/* Inspiring Value Slogan */}
           <div className="mt-4 pt-3 border-t border-emerald-500/30">
-            <p className="text-[11px] text-amber-100/90 italic font-serif leading-relaxed">
-              ﴿ وَمِنْ آيَاتِهِ أَنْ خَلَقَ لَكُم مِّنْ أَنفُسِكُمْ أَزْوَاجًا لِّتَسْكُنُوا إِلَيْهَا وَجَعَلَ بَيْنَكُم مَّوَدَّةً وَرَحْمَةً ﴾
+            <p className="text-[11px] text-amber-100/90 font-medium leading-relaxed">
+              «بيئة آمنة تجمع أصحاب النوايا الصادقة لتيسير الزواج وبناء بيوت قائمة على المودة والرحمة»
             </p>
           </div>
         </div>
@@ -139,7 +139,7 @@ export const StepEmailOtp: React.FC = () => {
             </div>
             <div className="flex flex-col items-center gap-1 border-x border-emerald-200/50">
               <Heart className="w-4 h-4 text-emerald-700" />
-              <span className="text-[10px] font-bold text-emerald-900">ضوابط شرعية</span>
+              <span className="text-[10px] font-bold text-emerald-900">ضوابط أخلاقية وأسرية</span>
             </div>
             <div className="flex flex-col items-center gap-1">
               <Sparkles className="w-4 h-4 text-emerald-700" />
@@ -316,10 +316,10 @@ export const StepEmailOtp: React.FC = () => {
             </form>
           )}
 
-          {/* Ethical & Sharia Compliance Footer */}
+          {/* Ethical Compliance Footer */}
           <div className="pt-2 text-center">
             <p className="text-[11px] text-slate-400 leading-relaxed">
-              بالتسجيل في مودة ورحمة، تتعهد بالالتزام بميثاق العفاف والضوابط الشرعية لحماية الأعراض وصيانة الخصوصية.
+              بالتسجيل في مودة ورحمة، تتعهد بالالتزام بميثاق الشرف الأخلاقي ومعايير الجدية التامة وصيانة الخصوصية.
             </p>
           </div>
         </div>

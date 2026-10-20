@@ -90,7 +90,7 @@ export const AppHeader: React.FC = () => {
       return { title: "الدعم والتواصل", icon: HelpCircle };
     }
     if (pathname.startsWith("/terms") || pathname.startsWith("/charter")) {
-      return { title: "الشروط والضوابط الشرعية", icon: FileText };
+      return { title: "الشروط وميثاق الشرف", icon: FileText };
     }
     if (pathname.startsWith("/privacy")) {
       return { title: "سياسة الخصوصية", icon: Info };

@@ -5,23 +5,23 @@ interface SplashScreenProps {
 }
 
 export const SplashScreen: React.FC<SplashScreenProps> = ({
-  message = "جاري تهيئة المنصة والمصادقة الشرعية...",
+  message = "جاري تهيئة المنصة وبدء الاتصال الآمن...",
 }) => {
   return (
     <div
       className="fixed inset-0 z-50 flex flex-col items-center justify-between p-6 bg-gradient-to-b from-[#064e3b] via-[#065f46] to-[#047857] text-white select-none overflow-hidden"
       dir="rtl"
     >
-      {/* Background Islamic Geometric Pattern Accent */}
+      {/* Background Subtle Geometric Pattern Accent */}
       <div className="absolute inset-0 opacity-5 pointer-events-none">
         <svg className="w-full h-full" xmlns="http://www.w3.org/2000/svg">
           <defs>
-            <pattern id="islamic-splash-pattern" width="60" height="60" patternUnits="userSpaceOnUse">
+            <pattern id="modern-splash-pattern" width="60" height="60" patternUnits="userSpaceOnUse">
               <path d="M30 0 L60 30 L30 60 L0 30 Z" fill="none" stroke="#fef08a" strokeWidth="1" />
               <circle cx="30" cy="30" r="10" fill="none" stroke="#fef08a" strokeWidth="0.8" />
             </pattern>
           </defs>
-          <rect width="100%" height="100%" fill="url(#islamic-splash-pattern)" />
+          <rect width="100%" height="100%" fill="url(#modern-splash-pattern)" />
         </svg>
       </div>
 
@@ -29,7 +29,7 @@ export const SplashScreen: React.FC<SplashScreenProps> = ({
       <div className="pt-8 text-center z-10">
         <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-emerald-800/60 border border-emerald-600/40 text-emerald-200 text-xs font-medium tracking-wide shadow-inner backdrop-blur-sm">
           <span>✨</span>
-          <span>عَفَافٌ • مَوَدَّةٌ • رَحْمَةٌ</span>
+          <span>أَمَانٌ • مَوَدَّةٌ • اسْتِقْرَارٌ</span>
           <span>✨</span>
         </div>
       </div>
@@ -47,7 +47,6 @@ export const SplashScreen: React.FC<SplashScreenProps> = ({
               alt="شعار مودة ورحمة"
               className="w-full h-full object-contain rounded-2xl drop-shadow-md"
               onError={(e) => {
-                // Fallback to SVG if PNG is loading
                 (e.currentTarget as HTMLImageElement).src = "/icon.svg";
               }}
             />
@@ -60,7 +59,7 @@ export const SplashScreen: React.FC<SplashScreenProps> = ({
             مَوَدَّةٌ وَرَحْمَة
           </h1>
           <p className="text-emerald-200 text-sm sm:text-base font-medium">
-            المنصة الإسلامية الموثوقة للزواج الشرعي
+            المنصة الموثوقة للزواج الجاد وبناء الأسرة
           </p>
         </div>
 
@@ -73,12 +72,11 @@ export const SplashScreen: React.FC<SplashScreenProps> = ({
         </div>
       </div>
 
-      {/* Footer Quranic Verse */}
+      {/* Footer Inspiring Quote */}
       <div className="pb-6 text-center z-10 max-w-md px-4">
-        <p className="text-xs sm:text-sm text-emerald-200/90 font-serif leading-relaxed italic">
-          ﴿ وَمِنْ آيَاتِهِ أَنْ خَلَقَ لَكُم مِّنْ أَنفُسِكُمْ أَزْوَاجًا لِّتَسْكُنُوا إِلَيْهَا وَجَعَلَ بَيْنَكُم مَّوَدَّةً وَرَحْمَةً ﴾
+        <p className="text-xs sm:text-sm text-emerald-100 font-sans leading-relaxed">
+          «منصة آمنة تجمع القلوب الصادقة لبناء بيوت عامرة بالمودة والسكينة والاحترام المتبادل»
         </p>
-        <span className="text-[10px] text-emerald-300/60 block mt-1">سورة الروم: ٢١</span>
       </div>
     </div>
   );

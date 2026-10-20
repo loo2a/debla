@@ -37,19 +37,19 @@ export const StepCharter: React.FC<StepCharterProps> = ({ onSuccess }) => {
       <div className="bg-slate-50 rounded-2xl p-4 border border-slate-100 space-y-3 text-xs leading-relaxed text-slate-700 max-h-72 overflow-y-auto">
         <div className="flex gap-2">
           <span className="text-emerald-600 font-bold">١.</span>
-          <p><b>القصد الشرعي:</b> أقر بأن تسجيلي في هذا التطبيق هو بهدف الزواج الشرعي الصادق، وليس للتسلية أو التعارف غير الجاد.</p>
+          <p><b>الجدية التامة وبناء الأسرة:</b> أقر بأن تسجيلي في هذا التطبيق هو بهدف الزواج الرسمي وبناء أسرة مستقرة، وليس للتسلية أو التعارف العابث.</p>
         </div>
         <div className="flex gap-2">
           <span className="text-emerald-600 font-bold">٢.</span>
-          <p><b>الصدق والأمانة:</b> أتعهد بصحة جميع البيانات المدخلة في ملفي الشخصي من السن والمؤهل والحالة الاجتماعية والصحية دون تدليس.</p>
+          <p><b>الصدق والأمانة:</b> أتعهد بصحة جميع البيانات المدخلة في ملفي الشخصي من السن والمؤهل والحالة الاجتماعية والصحية دون تضليل.</p>
         </div>
         <div className="flex gap-2">
           <span className="text-emerald-600 font-bold">٣.</span>
-          <p><b>حفظ الأعراض والخصوصية:</b> أتعهد بعدم نسخ أو نشر أو مشاركة أي بيانات أو صور لأي عضو خارج نطاق التطبيق وتحت طائلة المساءلة.</p>
+          <p><b>صيانة الخصوصية والاحترام:</b> أتعهد بعدم نسخ أو نشر أو مشاركة أي بيانات أو صور لأي عضو خارج نطاق التطبيق وتحت طائلة المساءلة القانونية.</p>
         </div>
         <div className="flex gap-2">
           <span className="text-emerald-600 font-bold">٤.</span>
-          <p><b>الرؤية الشرعية وإشراك الأهل:</b> أوافق على الالتزام بضوابط الشريعة وإشراك ولي الأمر في الوقت المناسب دون مماطلة.</p>
+          <p><b>التواصل الجاد وإشراك الأهل:</b> أوافق على الالتزام بآداب التعارف الراقي وإشراك الأهل والعائلة في الوقت المناسب دون مماطلة.</p>
         </div>
       </div>
 
@@ -61,7 +61,7 @@ export const StepCharter: React.FC<StepCharterProps> = ({ onSuccess }) => {
           className="w-5 h-5 rounded text-emerald-600 focus:ring-emerald-500 border-slate-300"
         />
         <span className="text-xs font-bold text-slate-800 leading-tight">
-          أقر وأتعهد بالالتزام التام ببنود ميثاق الشرف والضوابط الشرعية أعلاه.
+          أقر وأتعهد بالالتزام التام ببنود ميثاق الشرف الأخلاقي ومعايير الجدية الأسرية أعلاه.
         </span>
       </label>
 

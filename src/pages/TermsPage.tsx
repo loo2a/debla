@@ -18,7 +18,7 @@ export const TermsPage: React.FC = () => {
             </div>
             <div>
               <h1 className="text-xl font-extrabold text-slate-900">شروط الاستخدام وميثاق الشرف</h1>
-              <p className="text-xs text-slate-500 font-medium">الضوابط الشرعية والقانونية لمنصة مودة ورحمة</p>
+              <p className="text-xs text-slate-500 font-medium">الضوابط الأخلاقية والقانونية لمنصة مودة ورحمة</p>
             </div>
           </div>
           <Button 
@@ -36,10 +36,10 @@ export const TermsPage: React.FC = () => {
         <div className="bg-amber-50/70 border border-amber-200 rounded-2xl p-4 text-xs text-amber-900 leading-relaxed space-y-2">
           <p className="font-bold flex items-center gap-1.5 text-amber-800">
             <AlertTriangle className="w-4 h-4" />
-            ميثاق العهد والأمانة الشرعية
+            ميثاق العهد والأمانة والجدية
           </p>
           <p>
-            تطبيق مودة ورحمة مخصص حصرياً للتعارف الجاد بغرض الزواج الشرعي العلني، ولا نسمح بأي تعارف عابث، أو زواج سري، أو مخالفة للآداب والشرع الإسلامي الحنيف.
+            تطبيق مودة ورحمة مخصص حصرياً للتعارف الجاد بغرض الزواج الرسمي وبناء أسرة مستقرة، ولا نسمح بأي تعارف عابث، أو علاقات غير معلنة، أو مخالفة للآداب والقيم والأعراف المجتمعية الأصيلة.
           </p>
         </div>
 
@@ -77,7 +77,7 @@ export const TermsPage: React.FC = () => {
               3. خصوصية الأسر والعائلات
             </h2>
             <p className="text-xs text-slate-600 leading-relaxed pr-2">
-              • نؤكد على ضرورة إشراك الأهل وولي الأمر في الرؤية الشرعية والمراحل الأولى للتعارف.
+              • نؤكد على ضرورة إشراك الأهل والعائلة في المراحل الأولى للتعارف الجاد.
               <br />
               • يمنع نشر أو تداول أي معلومات أو صور تخص أي عضو خارج نطاق المنصة، ويعتبر ذلك خيانة للأمانة وتعرض صاحبها للمساءلة القانونية.
             </p>
@@ -86,7 +86,7 @@ export const TermsPage: React.FC = () => {
 
         {/* Footer info */}
         <div className="pt-4 border-t border-slate-100 text-center text-[11px] text-slate-400">
-          منصة مودة ورحمة • نسأل الله التوفيق والتيسير لجميع الشباب والفتيات في بناء بيوت صالحة.
+          منصة مودة ورحمة • نتمنى التوفيق والتيسير لجميع الشباب والفتيات في بناء بيوت عامرة بالمودة والسكينة.
         </div>
 
       </div>

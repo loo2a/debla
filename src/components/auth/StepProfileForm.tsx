@@ -7,7 +7,7 @@ import {
   Nationalities, Countries, EducationLevels, IncomeLevels,
   SkinColors, BodyBuilds, HealthStatuses, ReligiousCommitmentLevels,
   PrayersCommitment, QaImaStances, MahrOpinions, MarriageTimeframes,
-  MarriageReadinessLevels, ShariaVisionStances, HobbiesList,
+  MarriageReadinessLevels, ShariaVisionStances, ChristianMeetingStances, HobbiesList,
   ReligionsList, ChristianDenominationsList, ChristianReligiousCommitmentLevels,
   ChristianPrayersCommitment, ChurchAttendanceOptions
 } from "../../constants";
@@ -103,7 +103,9 @@ export const StepProfileForm: React.FC<StepProfileFormProps> = ({
         <h2 className="text-xl font-extrabold text-slate-800 flex items-center justify-between">
           <span>استكمال بيانات الملف الشخصي</span>
           <span className="text-xs font-bold text-emerald-700 bg-emerald-50 px-3 py-1 rounded-full">
-            {gender === Gender.MALE ? "👨 حساب شاب" : "🧕 حساب آنسة / سيدة"}
+            {gender === Gender.MALE 
+              ? "👨 حساب شاب مقبل على الزواج" 
+              : (selectedReligion === "مسلم" ? "🧕 حساب فتاة مقبلة على الزواج" : "👩 حساب فتاة مقبلة على الزواج")}
           </span>
         </h2>
 
@@ -220,6 +222,17 @@ export const StepProfileForm: React.FC<StepProfileFormProps> = ({
                 <option value={MaritalStatus.WIDOWED}>أرمل / أرملة</option>
               </Select>
 
+              <Select
+                label="الديانة"
+                required
+                error={errors.religion?.message}
+                {...register("religion")}
+              >
+                {ReligionsList.map((rel) => (
+                  <option key={rel} value={rel}>{rel}</option>
+                ))}
+              </Select>
+
               <div className="flex items-center gap-4 pt-4 sm:col-span-2">
                 <label className="flex items-center gap-2 cursor-pointer text-xs font-semibold text-slate-700">
                   <input
@@ -298,17 +311,6 @@ export const StepProfileForm: React.FC<StepProfileFormProps> = ({
               >
                 {HealthStatuses.map((h) => (
                   <option key={h} value={h}>{h}</option>
-                ))}
-              </Select>
-
-              <Select
-                label="الديانة"
-                required
-                error={errors.religion?.message}
-                {...register("religion")}
-              >
-                {ReligionsList.map((rel) => (
-                  <option key={rel} value={rel}>{rel}</option>
                 ))}
               </Select>
 
@@ -433,11 +435,11 @@ export const StepProfileForm: React.FC<StepProfileFormProps> = ({
               </Select>
 
               <Select
-                label="الموقف من الرؤية الشرعية"
+                label={selectedReligion === "مسيحي" ? "الموقف من اللقاء والتعارف الرسمي بمباركة الأهل" : "الموقف من الرؤية الشرعية"}
                 error={errors.shariaVisionStance?.message}
                 {...register("shariaVisionStance")}
               >
-                {ShariaVisionStances.map((v) => (
+                {(selectedReligion === "مسيحي" ? ChristianMeetingStances : ShariaVisionStances).map((v) => (
                   <option key={v} value={v}>{v}</option>
                 ))}
               </Select>

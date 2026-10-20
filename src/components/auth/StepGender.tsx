@@ -31,7 +31,7 @@ export const StepGender: React.FC<StepGenderProps> = ({ onSelect }) => {
         </div>
         <h2 className="text-xl font-black text-slate-800">تحديد صفة ونوع الحساب</h2>
         <p className="text-xs text-slate-500 leading-relaxed">
-          اختر صفتك في منصة (مودة ورحمة) لتهيئة التجربة الشرعية المناسبة لغرضك.
+          اختر صفتك في المنصة لتهيئة التجربة المناسبة لغرضك وبناء حياة أسرية مستقرة.
         </p>
       </div>
 
@@ -50,7 +50,7 @@ export const StepGender: React.FC<StepGenderProps> = ({ onSelect }) => {
           <span className="font-black text-slate-800 text-xs sm:text-sm group-hover:text-emerald-700">
             مقبل على الزواج (عريس)
           </span>
-          <span className="text-[10px] text-slate-400">باحث عن زوجة صالحة</span>
+          <span className="text-[10px] text-slate-400">باحث عن شريكة حياة صالحة</span>
         </button>
 
         {/* 2. عروسة مقبلة على الزواج */}
@@ -60,12 +60,12 @@ export const StepGender: React.FC<StepGenderProps> = ({ onSelect }) => {
           className="flex flex-col items-center justify-center p-4 sm:p-5 rounded-2xl border-2 border-slate-200 hover:border-emerald-500 hover:bg-emerald-50/50 transition group space-y-2 cursor-pointer text-center"
         >
           <div className="w-14 h-14 rounded-2xl bg-pink-50 text-pink-600 flex items-center justify-center text-3xl font-bold group-hover:scale-105 transition">
-            🧕
+            👰
           </div>
           <span className="font-black text-slate-800 text-xs sm:text-sm group-hover:text-emerald-700">
             مقبلة على الزواج (عروسة)
           </span>
-          <span className="text-[10px] text-slate-400">باحثة عن زوج صالح</span>
+          <span className="text-[10px] text-slate-400">باحثة عن شريك حياة صالح</span>
         </button>
 
         {/* 3. ولي أمر عن عروسة */}
@@ -79,13 +79,13 @@ export const StepGender: React.FC<StepGenderProps> = ({ onSelect }) => {
           }`}
         >
           <div className="w-14 h-14 rounded-2xl bg-purple-50 text-purple-700 flex items-center justify-center text-3xl font-bold group-hover:scale-105 transition">
-            🛡️🧕
+            🛡️👰
           </div>
           <span className="font-black text-slate-800 text-xs sm:text-sm group-hover:text-emerald-700">
             ولي أمر عن عروسة
           </span>
           <span className="text-[10px] text-slate-500 font-semibold">
-            أب / أخ للإشراف الشرعي
+            أب / والد / قريب للمتابعة الأسرية
           </span>
         </button>
 
@@ -106,7 +106,7 @@ export const StepGender: React.FC<StepGenderProps> = ({ onSelect }) => {
             ولي أمر عن عريس
           </span>
           <span className="text-[10px] text-slate-500 font-semibold">
-            والد / ولي أمر للمتابعة
+            والد / قريب للمتابعة الأسرية
           </span>
         </button>
       </div>
