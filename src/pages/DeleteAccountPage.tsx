@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Trash2, AlertTriangle, ArrowRight, CheckCircle2, ShieldCheck, Mail } from "lucide-react";
+import { Trash2, AlertTriangle, ArrowRight, CheckCircle2, ShieldCheck, Mail, Download } from "lucide-react";
 import { Button } from "../components/ui/Button";
 import { Input } from "../components/ui/Input";
 import { useApp } from "../lib/store";
@@ -162,14 +162,53 @@ export const DeleteAccountPage: React.FC = () => {
                     <p className="text-[11px] text-slate-500 leading-relaxed">
                       عند طلب الحذف، سيتم تعطيل حسابك وإخفاء ملفك فوراً مع منحك فترة سماح مدتها 30 يوماً يمكنك خلالها التراجع، وبعد انقضائها تُمسح كافة البيانات والصور نهائياً.
                     </p>
-                    <Button 
-                      onClick={handleScheduledDelete}
-                      variant="danger" 
-                      disabled={isDeleting}
-                      className="w-full text-xs py-3"
-                    >
-                      {isDeleting ? "جاري تقديم طلب الحذف..." : "طلب حذف الحساب (فترة تبريد 30 يوماً)"}
-                    </Button>
+                    <div className="flex flex-col gap-2 pt-1">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => {
+                          const dataToExport = {
+                            profile: {
+                              id: currentUser.id,
+                              memberNumber: currentUser.memberNumber,
+                              name: currentUser.name,
+                              gender: currentUser.gender,
+                              age: currentUser.age,
+                              religion: currentUser.religion,
+                              residence: currentUser.residence,
+                              nationality: currentUser.nationality,
+                              profession: currentUser.profession,
+                              education: currentUser.education,
+                              maritalStatus: currentUser.maritalStatus,
+                              aboutMe: currentUser.aboutMe,
+                              partnerSpecs: currentUser.partnerSpecs,
+                              joinDate: currentUser.joinDate,
+                            },
+                            exportedAt: new Date().toISOString(),
+                            compliance: "Egyptian Data Protection Law 151/2020 (Data Portability)",
+                          };
+                          const blob = new Blob([JSON.stringify(dataToExport, null, 2)], { type: "application/json" });
+                          const url = URL.createObjectURL(blob);
+                          const a = document.createElement("a");
+                          a.href = url;
+                          a.download = `my_profile_data_${currentUser.memberNumber || "user"}.json`;
+                          a.click();
+                          URL.revokeObjectURL(url);
+                        }}
+                        className="w-full text-xs py-2.5 flex items-center justify-center gap-2 border-slate-300 text-slate-700 hover:bg-slate-100"
+                      >
+                        <Download className="w-4 h-4 text-emerald-600" />
+                        <span>تحميل نسخة من بياناتي الشخصية (تصدير البيانات)</span>
+                      </Button>
+                      <Button 
+                        onClick={handleScheduledDelete}
+                        variant="danger" 
+                        disabled={isDeleting}
+                        className="w-full text-xs py-3"
+                      >
+                        {isDeleting ? "جاري تقديم طلب الحذف..." : "طلب حذف الحساب (فترة تبريد 30 يوماً)"}
+                      </Button>
+                    </div>
                   </>
                 )}
               </div>

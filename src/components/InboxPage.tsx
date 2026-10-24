@@ -172,14 +172,21 @@ export const InboxPage: React.FC<InboxPageProps> = ({
     ? (profiles.find(p => p.id === selectedChatUserId) || createFallbackPartner(selectedChatUserId))
     : undefined;
 
+  const [chatError, setChatError] = useState<string | null>(null);
+
   // Handle send message
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
+    setChatError(null);
     const text = typedMessage.trim();
     if (!text || !selectedChatUserId) return;
 
     const res = await sendMessage(selectedChatUserId, text);
-    if (res.ok) setTypedMessage("");
+    if (res.ok) {
+      setTypedMessage("");
+    } else if (res.error) {
+      setChatError(res.error);
+    }
   };
 
   // Filter user notifications
@@ -301,29 +308,69 @@ export const InboxPage: React.FC<InboxPageProps> = ({
               </div>
             )}
 
-            {/* Active Chat Input footer form or Guardian Read-only bar */}
+            {/* Active Chat Input footer form or Guardian Read-only bar or Concluded apology state */}
             {isGuardianViewingWard ? (
               <div className="p-3 border-t border-slate-100 bg-emerald-50/70 flex items-center justify-center gap-2 text-xs font-bold text-emerald-800">
                 <ShieldCheck className="w-4 h-4 text-emerald-600" />
                 <span>جلسة قراءة ومتابعة لولي الأمر (المحادثة مسجلة وتحت الإشراف الشرعي)</span>
               </div>
-            ) : currentUser.isPremium ? (
-              <form onSubmit={handleSendMessage} className="p-3 border-t border-slate-100 bg-white flex gap-2">
-                <input 
-                  type="text" 
-                  value={typedMessage}
-                  onChange={(e) => setTypedMessage(e.target.value)}
-                  placeholder="اكتب رسالتك الجادة والمحترمة هنا..."
-                  className="flex-1 px-4 py-2.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-1 focus:ring-emerald-500"
-                />
-                <button
-                  type="submit"
-                  className="p-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl transition flex items-center justify-center flex-shrink-0 shadow-md shadow-emerald-600/10"
-                >
-                  <Send className="w-4 h-4 rotate-180" />
-                </button>
-              </form>
-            ) : null}
+            ) : (() => {
+              const activeJourney = selectedChatUserId ? getJourneyState(currentUser.id, selectedChatUserId) : null;
+              if (activeJourney?.status === "concluded") {
+                return (
+                  <div className="p-3.5 border-t border-amber-200/60 bg-gradient-to-r from-amber-50 to-rose-50 flex items-center justify-between gap-3 text-xs">
+                    <div className="flex items-center gap-2 text-slate-700">
+                      <Lock className="w-4 h-4 text-amber-700 flex-shrink-0" />
+                      <div className="leading-snug">
+                        <span className="font-extrabold text-amber-900 block">المحادثة متوقفة بعد تقديم الاعتذار</span>
+                        <span className="text-[10px] text-slate-500">حفظاً للكرامة والوقار، يتوقف تبادل الرسائل تماماً ويُمنع الإلحاح أو اللوم.</span>
+                      </div>
+                    </div>
+                    <span className="px-2.5 py-1 rounded-xl bg-white border border-amber-200 text-amber-900 text-[10px] font-bold flex-shrink-0 shadow-2xs">
+                      تم الإنهاء بأدب ✓
+                    </span>
+                  </div>
+                );
+              }
+
+              if (currentUser.isPremium) {
+                return (
+                  <div className="border-t border-slate-100 bg-white">
+                    {chatError && (
+                      <div className="p-2.5 mx-3 mt-2 bg-rose-50 border border-rose-200 rounded-xl text-[11px] text-rose-700 flex items-center justify-between">
+                        <span>⚠️ {chatError}</span>
+                        <button 
+                          onClick={() => setChatError(null)} 
+                          className="text-rose-500 hover:text-rose-800 text-xs px-1"
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    )}
+                    <form onSubmit={handleSendMessage} className="p-3 flex gap-2">
+                      <input 
+                        type="text" 
+                        value={typedMessage}
+                        onChange={(e) => {
+                          setTypedMessage(e.target.value);
+                          if (chatError) setChatError(null);
+                        }}
+                        placeholder="اكتب رسالتك الجادة والمحترمة هنا..."
+                        className="flex-1 px-4 py-2.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                      />
+                      <button
+                        type="submit"
+                        className="p-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl transition flex items-center justify-center flex-shrink-0 shadow-md shadow-emerald-600/10"
+                      >
+                        <Send className="w-4 h-4 rotate-180" />
+                      </button>
+                    </form>
+                  </div>
+                );
+              }
+
+              return null;
+            })()}
 
           </div>
         ) : (

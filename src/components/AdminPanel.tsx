@@ -20,7 +20,7 @@ export const AdminPanel: React.FC = () => {
     isAdmin, profiles, premiumRequests, interactions, successStories, dbError, isSupabaseLoading,
     adminApprovePremium, adminRejectPremium, adminApproveStory, retryLoadData,
     profileEditRequests, adminReviewProfileEditRequest,
-    adminApprovePhoto, adminRejectPhoto
+    adminApprovePhoto, adminRejectPhoto, adminDeleteUser
   } = useApp();
   const { addToast, showConfirm } = useUIStore();
 
@@ -472,7 +472,7 @@ export const AdminPanel: React.FC = () => {
         {/* ======================================================== */}
         {activeTab === "reports" && (
           <div className="space-y-4">
-            <h3 className="font-bold text-slate-800 text-xs">بلاغات المخالفات الشرعية والأخلاقية ({reports.length})</h3>
+            <h3 className="font-bold text-slate-800 text-xs">طابور بلاغات المخالفات الشرعية والأخلاقية ({reports.length})</h3>
 
             {reports.length === 0 ? (
               <div className="bg-white rounded-2xl p-8 border border-slate-100 text-center text-slate-400 text-xs">
@@ -480,25 +480,84 @@ export const AdminPanel: React.FC = () => {
               </div>
             ) : (
               <div className="space-y-3">
-                {reports.map((report) => (
-                  <div key={report.id} className="bg-white rounded-2xl border border-rose-100 p-4 shadow-sm space-y-2">
-                    <div className="flex justify-between items-start">
-                      <span className="text-xs font-bold text-rose-800 flex items-center gap-1">
-                        <AlertTriangle className="w-3.5 h-3.5 text-rose-600" />
-                        بلاغ مخالفة
-                      </span>
-                      <span className="text-[10px] text-slate-400 font-mono">
-                        {new Date(report.timestamp).toLocaleString("ar-EG")}
-                      </span>
+                {reports.map((report) => {
+                  const reportedUser = profiles.find(p => p.id === report.toUserId);
+                  const reporterUser = profiles.find(p => p.id === report.fromUserId);
+
+                  return (
+                    <div key={report.id} className="bg-white rounded-2xl border border-rose-200/80 p-4 shadow-sm space-y-3">
+                      <div className="flex justify-between items-start">
+                        <span className="text-xs font-bold text-rose-800 flex items-center gap-1.5">
+                          <AlertTriangle className="w-4 h-4 text-rose-600" />
+                          بلاغ انتهاك أمان أو ميثاق الوقار
+                        </span>
+                        <span className="text-[10px] text-slate-400 font-mono">
+                          {new Date(report.timestamp).toLocaleString("ar-EG")}
+                        </span>
+                      </div>
+
+                      <div className="bg-slate-50 rounded-xl p-3 border border-slate-100 text-xs space-y-1.5">
+                        <div className="flex justify-between items-center text-slate-700">
+                          <span>
+                            <strong>المبلغ عنه:</strong>{" "}
+                            {reportedUser ? `${reportedUser.name} (${reportedUser.memberNumber})` : report.toUserId}
+                          </span>
+                          <span className="text-[10px] text-slate-400 font-mono">{reportedUser?.residence || ""}</span>
+                        </div>
+                        <div className="flex justify-between items-center text-slate-500 text-[11px]">
+                          <span>
+                            <strong>مقدم البلاغ:</strong>{" "}
+                            {reporterUser ? `${reporterUser.name} (${reporterUser.memberNumber})` : report.fromUserId}
+                          </span>
+                        </div>
+                      </div>
+
+                      <p className="text-xs text-rose-900 bg-rose-50/70 p-3 rounded-xl border border-rose-100 leading-relaxed font-medium">
+                        سبب البلاغ: {report.reason || "لم يذكر سبب محدد"}
+                      </p>
+
+                      {/* Action buttons */}
+                      <div className="flex flex-wrap gap-2 pt-1 border-t border-slate-100">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (!report.toUserId) return;
+                            handleSelectUserForBroadcast(report.toUserId);
+                            addToast("تم تحويلك إلى نافذة التنبيهات مع تحديد العضو المبلغ عنه.", "info");
+                          }}
+                          className="flex-1 py-2 px-3 bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1"
+                        >
+                          <span>توجيه إنذار رسمي</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            if (!report.toUserId) return;
+                            const confirmed = await showConfirm({
+                              title: "حظر وتعطيل حساب العضو",
+                              message: `هل أنت متأكد من حظر حساب ${reportedUser?.name || "هذا العضو"} وإيقافه عن استخدام المنصة؟`,
+                              confirmText: "نعم، احظر الحساب",
+                              cancelText: "تراجع",
+                              type: "danger"
+                            });
+                            if (!confirmed) return;
+
+                            const res = await adminDeleteUser(report.toUserId);
+                            if (res.ok) {
+                              addToast("تم حظر العضو وإيقاف حسابه بنجاح.", "success");
+                            } else {
+                              addToast(res.error || "تعذر تنفيذ الحظر.", "error");
+                            }
+                          }}
+                          className="flex-1 py-2 px-3 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold transition flex items-center justify-center gap-1"
+                        >
+                          <span>حظر الحساب</span>
+                        </button>
+                      </div>
                     </div>
-                    <p className="text-xs text-slate-700 bg-rose-50/50 p-2.5 rounded-xl border border-rose-100/70">
-                      سبب البلاغ: {report.reason || "لم يذكر سبب محدد"}
-                    </p>
-                    <div className="text-[10px] text-slate-400 font-mono">
-                      مقدم البلاغ: {report.fromUserId} • المبلغ عنه: {report.toUserId}
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>

@@ -12,6 +12,7 @@ import { compressImage } from "./imageUtils";
 import { INITIAL_ACADEMY_ARTICLES } from "./defaultAcademyArticles";
 import { preCheckUploadedImage } from "./photoModeration";
 import { getJourneyState } from "./marriageJourney";
+import { checkMessageSafety } from "./safetyModeration";
 
 export interface ActionResult {
   ok: boolean;
@@ -836,7 +837,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (updatedData.shariaVisionStance !== undefined) dbPayload.sharia_vision_stance = updatedData.shariaVisionStance;
     if (updatedData.aboutMe !== undefined) dbPayload.about_me = updatedData.aboutMe;
     if (updatedData.partnerSpecs !== undefined) dbPayload.partner_specs = updatedData.partnerSpecs;
+    if (updatedData.profileImage !== undefined) dbPayload.profile_image_url = updatedData.profileImage;
     if (updatedData.photoPrivacy !== undefined) dbPayload.photo_privacy = updatedData.photoPrivacy;
+    if (updatedData.photoModerationStatus !== undefined) dbPayload.photo_moderation_status = updatedData.photoModerationStatus;
+    if (updatedData.photoSubmittedAt !== undefined) dbPayload.photo_submitted_at = updatedData.photoSubmittedAt;
     if (updatedData.incognitoMode !== undefined) dbPayload.incognito_mode = updatedData.incognitoMode;
     if (updatedData.isMarriageCertified !== undefined) dbPayload.is_marriage_certified = updatedData.isMarriageCertified;
     if (updatedData.marriageCertificateDate !== undefined) dbPayload.marriage_certificate_date = updatedData.marriageCertificateDate;
@@ -1190,6 +1194,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (!text) return { ok: false, error: "الرسالة فارغة." };
     if (text.length > MAX_MESSAGE_LENGTH) {
       return fail({ code: "23514" });
+    }
+
+    // 🛡️ فحص الأمان الأخلاقي ومكافحة مشاركة أرقام الهواتف والروابط والحسابات الخارجية
+    const safetyCheck = checkMessageSafety(text);
+    if (!safetyCheck.isAllowed) {
+      return {
+        ok: false,
+        error: safetyCheck.reason || "الرسالة تحتوي على بيانات اتصال مخالفة لضوابط الأمان والوقار."
+      };
     }
 
     // التحقق من حالة رحلة الزواج: منع الإلحاح أو الرسائل بعد إنهاء التعارف بالاعتذار
