@@ -62,9 +62,14 @@ interface AppContextType {
   reportProfile: (toUserId: string, reason: string) => Promise<ActionResult>;
   recordProfileView: (viewedId: string) => Promise<void>;
 
-  // Messaging
+  // Online Presence (التواجد اللحظي الحقيقي)
+  onlineUserIds: Set<string>;
+  isUserOnline: (userId: string) => boolean;
+
+  // Messaging & Conversation Pagination
   sendMessage: (toUserId: string, content: string) => Promise<ActionResult>;
   markMessagesAsRead: (senderId: string) => void;
+  fetchConversationMessages: (partnerId: string, limit?: number) => Promise<Message[]>;
 
   // Search & Pagination
   searchProfiles: (filter: SearchProfilesFilter) => Promise<SearchProfilesResponse>;
@@ -282,6 +287,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [profileEditRequests, setProfileEditRequests] = useState<ProfileEditRequest[]>([]);
   const [coupons, setCoupons] = useState<Coupon[]>([]);
   const [academyArticles, setAcademyArticles] = useState<AcademyArticle[]>(INITIAL_ACADEMY_ARTICLES);
+  const [onlineUserIds, setOnlineUserIds] = useState<Set<string>>(new Set());
 
   const [dbError, setDbError] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
@@ -290,6 +296,50 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const loadedUserId = useRef<string | null>(null);
   const errorTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const isUserOnline = useCallback((targetUserId: string): boolean => {
+    if (!targetUserId) return false;
+    if (onlineUserIds.has(targetUserId)) return true;
+    const p = profiles.find(pr => pr.id === targetUserId);
+    return Boolean(p?.isOnline);
+  }, [onlineUserIds, profiles]);
+
+  // ⚡ التواجد اللحظي الحقيقي (Realtime Presence)
+  useEffect(() => {
+    if (!currentUser?.id) return;
+
+    const channel = supabase.channel("online_presence_room", {
+      config: { presence: { key: currentUser.id } }
+    });
+
+    channel
+      .on("presence", { event: "sync" }, () => {
+        const state = channel.presenceState();
+        const activeIds = new Set<string>();
+        for (const key of Object.keys(state)) {
+          activeIds.add(key);
+        }
+        setOnlineUserIds(activeIds);
+      })
+      .subscribe(async (status) => {
+        if (status === "SUBSCRIBED") {
+          await channel.track({
+            user_id: currentUser.id,
+            online_at: new Date().toISOString(),
+          });
+        }
+      });
+
+    return () => {
+      void channel.untrack();
+      void supabase.removeChannel(channel);
+    };
+  }, [currentUser?.id]);
+
+  // ⏰ فحص وإنهاء الاشتراكات المنتهية آلياً عند بدء تشغيل التطبيق
+  useEffect(() => {
+    void Promise.resolve(supabase.rpc("expire_premium_subscriptions")).catch(() => {});
+  }, []);
 
   const clearActionError = useCallback(() => setActionError(null), []);
 
@@ -368,40 +418,50 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setIsSupabaseLoading(true);
 
     try {
+      // 1) التحقق من صلاحيات المدير أولاً لتجنب استعلام جداول الإدارة للمستخدم العادي
+      const { data: isAdminData } = await supabase.rpc("is_admin");
+      const userIsAdmin = Boolean(isAdminData);
+
+      // 2) استعلامات محسنة موجهة تخفض استهلاك الذاكرة وتمنع عنق الزجاجة
       const [
-        adminRes, profilesRes, privateRes, sensitiveRes, prefRes,
+        myProfileRes, myPrivateRes, mySensitiveRes, myPrefRes,
+        candidatesRes,
         messagesRes, notificationsRes, interactionsRes, requestsRes, storiesRes,
         surveysRes, editRequestsRes, couponsRes
       ] = await Promise.all([
-        supabase.rpc("is_admin"),
-        supabase.from("profiles").select("*").limit(100),
-        supabase.from("profile_private").select("*"),
-        Promise.resolve(supabase.from("profile_sensitive").select("*")).catch(() => ({ data: [] } as any)),
-        Promise.resolve(supabase.from("profile_preferences").select("*")).catch(() => ({ data: [] } as any)),
-        supabase.from("messages").select("*").order("timestamp", { ascending: true }).limit(500),
-        supabase.from("notifications").select("*").order("timestamp", { ascending: false }).limit(100),
-        supabase.from("interactions").select("*").limit(500),
-        supabase.from("premium_requests").select("*").order("timestamp", { ascending: false }).limit(50),
-        supabase.from("success_stories").select("*").order("date", { ascending: false }).limit(20),
-        Promise.resolve(supabase.from("compatibility_surveys").select("*").limit(100)).catch(() => ({ data: [] } as any)),
-        Promise.resolve(supabase.from("profile_edit_requests").select("*").order("created_at", { ascending: false }).limit(50)).catch(() => ({ data: [] } as any)),
-        Promise.resolve(supabase.from("coupons").select("*").order("created_at", { ascending: false }).limit(50)).catch(() => ({ data: [] } as any)),
+        supabase.from("profiles").select("*").eq("id", userId).maybeSingle(),
+        supabase.from("profile_private").select("*").eq("id", userId).maybeSingle(),
+        Promise.resolve(supabase.from("profile_sensitive").select("*").eq("user_id", userId).maybeSingle()).catch(() => ({ data: null } as any)),
+        Promise.resolve(supabase.from("profile_preferences").select("*").eq("user_id", userId).maybeSingle()).catch(() => ({ data: null } as any)),
+        // جلب عينة خفيفة للبطاقات السريعة (30 بدلاً من 100)
+        supabase.from("profiles").select("*").neq("id", userId).limit(30),
+        // رسائل المستخدم الحالي فقط وليس 500 رسالة عامة!
+        supabase.from("messages").select("*").or(`senderId.eq.${userId},receiverId.eq.${userId}`).order("timestamp", { ascending: true }).limit(100),
+        supabase.from("notifications").select("*").eq("userId", userId).order("timestamp", { ascending: false }).limit(40),
+        supabase.from("interactions").select("*").or(`fromUserId.eq.${userId},toUserId.eq.${userId}`).limit(150),
+        userIsAdmin ? supabase.from("premium_requests").select("*").order("timestamp", { ascending: false }).limit(50) : Promise.resolve({ data: [] } as any),
+        supabase.from("success_stories").select("*").order("date", { ascending: false }).limit(10),
+        Promise.resolve(supabase.from("compatibility_surveys").select("*").limit(30)).catch(() => ({ data: [] } as any)),
+        userIsAdmin ? Promise.resolve(supabase.from("profile_edit_requests").select("*").order("created_at", { ascending: false }).limit(50)).catch(() => ({ data: [] } as any)) : Promise.resolve({ data: [] } as any),
+        userIsAdmin ? Promise.resolve(supabase.from("coupons").select("*").order("created_at", { ascending: false }).limit(50)).catch(() => ({ data: [] } as any)) : Promise.resolve({ data: [] } as any),
       ]);
 
       const firstError = [
-        adminRes, profilesRes, privateRes, messagesRes,
-        notificationsRes, interactionsRes, requestsRes, storiesRes
+        messagesRes, notificationsRes, interactionsRes, storiesRes
       ].find(r => r.error)?.error;
       if (firstError) throw firstError;
 
-      const privateById = new Map<string, any>((privateRes.data ?? []).map((p: any) => [p.id, p]));
-      const sensitiveById = new Map<string, any>((sensitiveRes.data ?? []).map((s: any) => [s.user_id, s]));
-      const prefById = new Map<string, any>((prefRes.data ?? []).map((p: any) => [p.user_id, p]));
+      const allProfiles: UserProfile[] = [];
+      let me: UserProfile | undefined = undefined;
 
-      const allProfiles = (profilesRes.data ?? []).map((row: any) =>
-        toProfile(row, privateById.get(row.id), sensitiveById.get(row.id), prefById.get(row.id))
-      );
-      let me = allProfiles.find(p => p.id === userId);
+      if (myProfileRes.data) {
+        me = toProfile(myProfileRes.data, myPrivateRes.data, mySensitiveRes.data, myPrefRes.data);
+        allProfiles.push(me);
+      }
+
+      (candidatesRes.data ?? []).forEach((row: any) => {
+        allProfiles.push(toProfile(row));
+      });
 
       // 1. استعلام مباشر عن ملف المستخدم إذا لم يكن ضمن الـ 100 الأولى
       if (!me) {
@@ -496,7 +556,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }));
       setCoupons(parsedCoupons);
 
-      setIsAdmin(adminRes.data === true);
+      setIsAdmin(userIsAdmin);
       setProfiles(allProfiles);
       setCurrentUser(me);
       setMessages((messagesRes.data ?? []) as Message[]);
@@ -1261,6 +1321,30 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     ));
     void Promise.resolve(supabase.rpc("mark_messages_read", { p_sender: senderId }));
   };
+
+  const fetchConversationMessages = useCallback(async (partnerId: string, limit = 50): Promise<Message[]> => {
+    if (!currentUser) return [];
+    try {
+      const { data, error } = await supabase
+        .from("messages")
+        .select("*")
+        .or(`and(senderId.eq.${currentUser.id},receiverId.eq.${partnerId}),and(senderId.eq.${partnerId},receiverId.eq.${currentUser.id})`)
+        .order("timestamp", { ascending: true })
+        .limit(limit);
+
+      if (error) throw error;
+      const fetched = (data ?? []) as Message[];
+      setMessages(prev => {
+        const existingIds = new Set(prev.map(m => m.id));
+        const newOnes = fetched.filter(m => !existingIds.has(m.id));
+        return [...prev, ...newOnes];
+      });
+      return fetched;
+    } catch (err) {
+      console.warn("fetchConversationMessages error:", err);
+      return [];
+    }
+  }, [currentUser]);
 
   // ------------------------------------------------------------------
   // Notifications
@@ -2046,6 +2130,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
       sendMessage,
       markMessagesAsRead,
+      fetchConversationMessages,
+      onlineUserIds,
+      isUserOnline,
       searchProfiles,
       fetchProfileById,
 

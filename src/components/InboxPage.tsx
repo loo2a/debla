@@ -44,7 +44,7 @@ export const InboxPage: React.FC<InboxPageProps> = ({
   const { 
     currentUser, messages, notifications, profiles, sendMessage, 
     markMessagesAsRead, markNotificationAsRead, markAllNotificationsAsRead,
-    fetchProfileById, guardianStatus 
+    fetchProfileById, guardianStatus, fetchConversationMessages, isUserOnline 
   } = useApp();
 
   const [activeTab, setActiveTab] = useState<"messages" | "notifications">("messages");
@@ -172,6 +172,13 @@ export const InboxPage: React.FC<InboxPageProps> = ({
     ? (profiles.find(p => p.id === selectedChatUserId) || createFallbackPartner(selectedChatUserId))
     : undefined;
 
+  // جلب سجل رسائل المحادثة المحددة عند فتحها لتقليل استهلاك الذاكرة
+  useEffect(() => {
+    if (selectedChatUserId) {
+      void fetchConversationMessages(selectedChatUserId);
+    }
+  }, [selectedChatUserId, fetchConversationMessages]);
+
   const [chatError, setChatError] = useState<string | null>(null);
 
   // Handle send message
@@ -222,7 +229,16 @@ export const InboxPage: React.FC<InboxPageProps> = ({
                     {activeChatPartner.name}
                     {activeChatPartner.isVerified && <ShieldCheck className="w-4 h-4 text-emerald-600" />}
                   </h4>
-                  <p className="text-[10px] text-slate-400 font-mono">عضوية رقم: {activeChatPartner.memberNumber} • {activeChatPartner.isOnline ? "نشط الآن" : "أوفلاين"}</p>
+                  <div className="flex items-center gap-1.5 text-[10px]">
+                    <span className="font-mono text-slate-400">عضوية: {activeChatPartner.memberNumber}</span>
+                    <span className="text-slate-300">•</span>
+                    <span className="flex items-center gap-1">
+                      <span className={`w-2 h-2 rounded-full ${isUserOnline(activeChatPartner.id) ? "bg-emerald-500 animate-pulse" : "bg-slate-300"}`} />
+                      <span className={isUserOnline(activeChatPartner.id) ? "text-emerald-700 font-bold" : "text-slate-400"}>
+                        {isUserOnline(activeChatPartner.id) ? "متصل الآن" : "غير متصل"}
+                      </span>
+                    </span>
+                  </div>
                 </div>
               </div>
 

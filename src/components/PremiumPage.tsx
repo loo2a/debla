@@ -3,9 +3,10 @@ import { useApp } from "../lib/store";
 import { Sparkles, CheckCircle2, CreditCard, Smartphone, ShieldAlert, Tag, Check, HelpCircle, Mail } from "lucide-react";
 import { Capacitor } from "@capacitor/core";
 import { useUIStore } from "../stores/uiStore";
+import { purchaseViaGooglePlay } from "../lib/googlePlayBilling";
 
 export const PremiumPage: React.FC = () => {
-  const { currentUser, submitPremiumRequest, premiumRequests, coupons } = useApp();
+  const { currentUser, submitPremiumRequest, premiumRequests, coupons, retryLoadData } = useApp();
   const { addToast } = useUIStore();
 
   const isNative = Capacitor.isNativePlatform();
@@ -72,6 +73,25 @@ export const PremiumPage: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // مسار الدفع الفوري الرسمي عبر متجر Google Play للأندرويد
+    if (paymentMethod === "google_play") {
+      setIsSubmitting(true);
+      try {
+        const purchaseRes = await purchaseViaGooglePlay(selectedPlan, currentUser.id);
+        if (purchaseRes.ok) {
+          setHasSubmitted(true);
+          addToast("تهانينا! تم تفعيل اشتراكك في باقة التميز بنجاح عبر متجر Google Play.", "success");
+          await retryLoadData();
+        } else {
+          addToast(purchaseRes.error || "تعذر إتمام الدفع عبر متجر Google Play.", "error");
+        }
+      } finally {
+        setIsSubmitting(false);
+      }
+      return;
+    }
+
     if (paymentMethod === "mobile_wallet" && !walletNumber) {
       addToast("يرجى إدخال رقم المحفظة المحول منها لتأكيد العملية والتحقق منها.", "error");
       return;
