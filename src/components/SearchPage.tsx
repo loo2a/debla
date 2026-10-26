@@ -33,11 +33,12 @@ export const SearchPage: React.FC<SearchPageProps> = ({ onSelectProfile }) => {
   if (!currentUser) return null;
 
   const oppositeGender = currentUser.gender === Gender.MALE ? Gender.FEMALE : Gender.MALE;
+  const userReligion = currentUser.religion || "مسلم";
 
   const [filter, setFilter] = useState<SearchFilterState>({
     nationality: "all",
     residence: "all",
-    religion: currentUser.religion || "all",
+    religion: userReligion,
     christianDenomination: currentUser.christianDenomination || "all",
     ageFrom: 18,
     ageTo: 65,
@@ -83,7 +84,7 @@ export const SearchPage: React.FC<SearchPageProps> = ({ onSelectProfile }) => {
           maxAge: filter.ageTo,
           nationality: filter.nationality === "all" ? undefined : filter.nationality,
           residence: filter.residence === "all" ? undefined : filter.residence,
-          religion: filter.religion === "all" ? undefined : filter.religion,
+          religion: userReligion,
           christianDenomination: filter.christianDenomination === "all" ? undefined : filter.christianDenomination,
           maritalStatus: filter.maritalStatus === "all" ? undefined : filter.maritalStatus,
           religiousCommitment: filter.isAdvanced && filter.religiosity !== "all" ? filter.religiosity : undefined,
@@ -112,7 +113,7 @@ export const SearchPage: React.FC<SearchPageProps> = ({ onSelectProfile }) => {
           setIsSearching(false);
         }
       }
-    }, 250);
+    }, 450);
 
     return () => {
       isCancelled = true;
@@ -178,7 +179,7 @@ export const SearchPage: React.FC<SearchPageProps> = ({ onSelectProfile }) => {
                   setFilter({
                     nationality: "all",
                     residence: "all",
-                    religion: currentUser.religion || "all",
+                    religion: userReligion,
                     christianDenomination: currentUser.christianDenomination || "all",
                     ageFrom: 18,
                     ageTo: 65,

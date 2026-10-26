@@ -89,10 +89,27 @@ export class NativeBridge {
         return null;
       }
 
-      // 2. تسجيل الجهاز للحصول على FCM Token
+      // 2. إنشاء قناة إشعارات عالية الأهمية لنظام أندرويد 8.0 فما فوق
+      try {
+        await PushNotifications.createChannel({
+          id: "default",
+          name: "إشعارات دبلة ومودة",
+          description: "تنبيهات الرسائل الجديدة والاهتمامات المتبادلة",
+          importance: 5,
+          visibility: 1,
+          sound: "default",
+          vibration: true,
+          lights: true,
+          lightColor: "#065f46",
+        });
+      } catch (channelErr) {
+        console.warn("Could not create android notification channel:", channelErr);
+      }
+
+      // 3. تسجيل الجهاز للحصول على FCM Token
       await PushNotifications.register();
 
-      // 3. الاستماع لوصول التوكن وحفظه في Supabase
+      // 4. الاستماع لوصول التوكن وحفظه في Supabase
       return new Promise((resolve) => {
         PushNotifications.addListener("registration", async (token: Token) => {
           const fcmToken = token.value;
@@ -116,7 +133,12 @@ export class NativeBridge {
           resolve(null);
         });
 
-        // 4. معالجة النقر على الإشعار للانتقال للمحادثة في تطبيق BrowserRouter
+        // 5. استقبال الإشعار أثناء فتح التطبيق في الواجهة (Foreground)
+        PushNotifications.addListener("pushNotificationReceived", (notification) => {
+          console.log("Push notification received in foreground:", notification.title);
+        });
+
+        // 6. معالجة النقر على الإشعار للانتقال للمحادثة في تطبيق BrowserRouter
         PushNotifications.addListener("pushNotificationActionPerformed", (notification: ActionPerformed) => {
           const data = notification.notification.data;
           if (data?.chatUserId) {

@@ -105,16 +105,10 @@ export const SearchFilters: React.FC<SearchFiltersProps> = ({
 
         <div className="space-y-1">
           <label className="text-xs font-bold text-slate-600 block">الديانة</label>
-          <select
-            value={filter.religion}
-            onChange={(e) => onChange((prev) => ({ ...prev, religion: e.target.value }))}
-            className="w-full bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-2 text-xs text-slate-800 focus:outline-none focus:ring-1 focus:ring-emerald-500"
-          >
-            <option value="all">كل الأديان</option>
-            {ReligionsList.map((rel) => (
-              <option key={rel} value={rel}>{rel}</option>
-            ))}
-          </select>
+          <div className="w-full bg-slate-100/90 border border-slate-200/90 rounded-xl px-2.5 py-2 text-xs font-bold text-slate-700 flex items-center justify-between">
+            <span>{filter.religion || "مسلم"}</span>
+            <span className="text-[10px] text-emerald-700 bg-emerald-50 border border-emerald-200/60 px-1.5 py-0.5 rounded font-semibold">توافق شرعي تام</span>
+          </div>
         </div>
 
         {filter.religion === "مسيحي" && (

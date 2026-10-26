@@ -11,7 +11,12 @@ export function calculateCompatibility(
   mySurvey?: CompatibilitySurvey | null,
   otherSurvey?: CompatibilitySurvey | null
 ): number {
-  if (!me || !other) return 70;
+  if (!me || !other) return 0;
+
+  // الشرط الحاسم: التوافق الديني التام (منع التوافق بين الأديان المختلفة)
+  const myRel = (me.religion || "مسلم").trim();
+  const otherRel = (other.religion || "مسلم").trim();
+  if (myRel !== otherRel) return 0;
 
   let score = 55;
 
@@ -162,10 +167,12 @@ export function getRecommendedCandidates(
   // إضافة من تم سحبهم في الجلسة الحالية
   swipedIds.forEach((id) => interactedIds.add(id));
 
-  // ترشيح الملفات المؤهلة
+  // ترشيح الملفات المؤهلة مع الالتزام الصارم بالتطابق الديني
+  const myReligion = (currentUser.religion || "مسلم").trim();
   const eligible = allProfiles.filter((p) => {
     if (p.id === currentUser.id) return false;
     if (p.gender !== oppositeGender) return false;
+    if ((p.religion || "مسلم").trim() !== myReligion) return false;
     if (!p.name || p.name.trim() === "") return false;
     if (interactedIds.has(p.id)) return false;
     return true;

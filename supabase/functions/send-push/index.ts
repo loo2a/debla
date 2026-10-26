@@ -102,7 +102,27 @@ Deno.serve(async (req) => {
       }
     }
 
-    const { userId, title, body, data } = await req.json();
+    const rawBody = await req.json();
+
+    // دعم الاستدعاء المباشر أو الاستدعاء عبر Supabase Database Webhook (record)
+    const isWebhook = Boolean(rawBody.record);
+    const userId = isWebhook ? (rawBody.record.userId || rawBody.record.user_id) : rawBody.userId;
+    const title = isWebhook 
+      ? (rawBody.record.senderName || rawBody.record.sender_name 
+          ? `إشعار من ${rawBody.record.senderName || rawBody.record.sender_name}` 
+          : "إشعار جديد - مودة ورحمة")
+      : rawBody.title;
+    const body = isWebhook 
+      ? (rawBody.record.content || "لديك تنبيه جديد في تطبيق مودة ورحمة")
+      : rawBody.body;
+    const data = isWebhook
+      ? {
+          notificationId: String(rawBody.record.id || ""),
+          type: String(rawBody.record.type || "system"),
+          chatUserId: String(rawBody.record.senderId || rawBody.record.sender_id || ""),
+          url: rawBody.record.type === "message" ? `/inbox/${rawBody.record.senderId || rawBody.record.sender_id}` : "/inbox"
+        }
+      : rawBody.data;
 
     if (!userId || !title) {
       return new Response(JSON.stringify({ error: "Missing required fields: userId, title" }), {

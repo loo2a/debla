@@ -15,7 +15,10 @@ export const IgnoredPage: React.FC = () => {
   if (!currentUser) return null;
 
   const oppositeGender = currentUser.gender === Gender.MALE ? Gender.FEMALE : Gender.MALE;
-  const matchProfiles = profiles.filter(p => p.gender === oppositeGender && p.name !== "");
+  const myReligion = (currentUser.religion || "مسلم").trim();
+  const matchProfiles = profiles.filter(
+    p => p.gender === oppositeGender && (p.religion || "مسلم").trim() === myReligion && p.name !== ""
+  );
 
   const ignoredUserIds = interactions
     .filter(i => i.fromUserId === currentUser.id && i.type === "ignore")

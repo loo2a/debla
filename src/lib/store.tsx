@@ -296,6 +296,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const loadedUserId = useRef<string | null>(null);
   const errorTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const viewedProfilesInSession = useRef<Set<string>>(new Set());
 
   const isUserOnline = useCallback((targetUserId: string): boolean => {
     if (!targetUserId) return false;
@@ -358,6 +359,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const resetState = useCallback(() => {
     loadedUserId.current = null;
+    viewedProfilesInSession.current.clear();
     setCurrentUser(null);
     setIsAdmin(false);
     setProfiles([]);
@@ -459,8 +461,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         allProfiles.push(me);
       }
 
+      const myReligion = (me?.religion || "مسلم").trim();
+      const targetGender = me ? (me.gender === "male" ? "female" : "male") : null;
+
       (candidatesRes.data ?? []).forEach((row: any) => {
-        allProfiles.push(toProfile(row));
+        const p = toProfile(row);
+        // عزل صارم: منع خلط الجنسين ومنع خلط المسلمين والمسيحيين نهائياً
+        if (targetGender && p.gender !== targetGender) return;
+        if ((p.religion || "مسلم").trim() !== myReligion) return;
+        allProfiles.push(p);
       });
 
       // 1. استعلام مباشر عن ملف المستخدم إذا لم يكن ضمن الـ 100 الأولى
@@ -596,6 +605,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
     };
 
+    let authInitiated = false;
     const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
       cleanOAuthHash();
       if (event === "SIGNED_OUT" || !session) {
@@ -604,14 +614,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setIsAuthReady(true);
         return;
       }
-      setTimeout(() => { void loadAll(session.user.id); }, 0);
+      authInitiated = true;
+      void loadAll(session.user.id);
     });
 
-    // فحص الجلسة الحالية والتأكد من تهيئة الحالة
+    // فحص الجلسة الحالية والتأكد من تهيئة الحالة عند انعدام الجلسة أو تأخر الحدث
     void supabase.auth.getSession().then(({ data }) => {
       if (data.session) {
         cleanOAuthHash();
-        void loadAll(data.session.user.id);
+        if (!authInitiated) {
+          authInitiated = true;
+          void loadAll(data.session.user.id);
+        }
       } else {
         setIsAuthReady(true);
       }
@@ -621,42 +635,48 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   }, [loadAll, resetState]);
 
   // ------------------------------------------------------------------
-  // Realtime subscription for messages & notifications
+  // Realtime subscription with server-side filters to preserve quotas
   // ------------------------------------------------------------------
   useEffect(() => {
-    if (!currentUser) return;
+    if (!currentUser?.id) return;
 
     const channel = supabase
       .channel(`rt-${currentUser.id}`)
       .on(
         "postgres_changes",
         {
-          event: "*",
+          event: "INSERT",
           schema: "public",
           table: "messages",
+          filter: `receiverId=eq.${currentUser.id}`,
         },
         (payload) => {
-          if (payload.eventType === "INSERT") {
-            const newMsg = payload.new as any;
-            if (newMsg.senderId === currentUser.id || newMsg.receiverId === currentUser.id ||
-                newMsg.sender_id === currentUser.id || newMsg.receiver_id === currentUser.id) {
-              const formatted: Message = {
-                id: newMsg.id,
-                senderId: newMsg.senderId || newMsg.sender_id,
-                receiverId: newMsg.receiverId || newMsg.receiver_id,
-                content: newMsg.content,
-                timestamp: newMsg.timestamp || newMsg.created_at,
-                isRead: newMsg.isRead ?? newMsg.is_read ?? false,
-              };
-              setMessages((prev) => {
-                if (prev.some(m => m.id === formatted.id)) return prev;
-                return [...prev, formatted];
-              });
-            }
-          } else if (payload.eventType === "UPDATE") {
-            const updated = payload.new as any;
-            setMessages((prev) => prev.map(m => (m.id === updated.id ? { ...m, isRead: updated.isRead ?? updated.is_read ?? m.isRead } : m)));
-          }
+          const newMsg = payload.new as any;
+          const formatted: Message = {
+            id: newMsg.id,
+            senderId: newMsg.senderId || newMsg.sender_id,
+            receiverId: newMsg.receiverId || newMsg.receiver_id,
+            content: newMsg.content,
+            timestamp: newMsg.timestamp || newMsg.created_at,
+            isRead: newMsg.isRead ?? newMsg.is_read ?? false,
+          };
+          setMessages((prev) => {
+            if (prev.some(m => m.id === formatted.id)) return prev;
+            return [...prev, formatted];
+          });
+        }
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "messages",
+          filter: `senderId=eq.${currentUser.id}`,
+        },
+        (payload) => {
+          const updated = payload.new as any;
+          setMessages((prev) => prev.map(m => (m.id === updated.id ? { ...m, isRead: updated.isRead ?? updated.is_read ?? m.isRead } : m)));
         }
       )
       .on(
@@ -665,26 +685,25 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           event: "*",
           schema: "public",
           table: "notifications",
+          filter: `userId=eq.${currentUser.id}`,
         },
         (payload) => {
           if (payload.eventType === "INSERT") {
             const newNotif = payload.new as any;
-            if (newNotif.userId === currentUser.id || newNotif.user_id === currentUser.id) {
-              const formatted: Notification = {
-                id: newNotif.id,
-                userId: newNotif.userId || newNotif.user_id,
-                type: newNotif.type,
-                senderId: newNotif.senderId || newNotif.sender_id,
-                senderName: newNotif.senderName || newNotif.sender_name,
-                content: newNotif.content,
-                timestamp: newNotif.timestamp || newNotif.created_at,
-                isRead: newNotif.isRead ?? newNotif.is_read ?? false,
-              };
-              setNotifications((prev) => {
-                if (prev.some(n => n.id === formatted.id)) return prev;
-                return [formatted, ...prev];
-              });
-            }
+            const formatted: Notification = {
+              id: newNotif.id,
+              userId: newNotif.userId || newNotif.user_id,
+              type: newNotif.type,
+              senderId: newNotif.senderId || newNotif.sender_id,
+              senderName: newNotif.senderName || newNotif.sender_name,
+              content: newNotif.content,
+              timestamp: newNotif.timestamp || newNotif.created_at,
+              isRead: newNotif.isRead ?? newNotif.is_read ?? false,
+            };
+            setNotifications((prev) => {
+              if (prev.some(n => n.id === formatted.id)) return prev;
+              return [formatted, ...prev];
+            });
           } else if (payload.eventType === "UPDATE") {
             const updated = payload.new as any;
             setNotifications((prev) => prev.map(n => (n.id === updated.id ? { ...n, isRead: updated.isRead ?? updated.is_read ?? n.isRead } : n)));
@@ -697,24 +716,22 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           event: "INSERT",
           schema: "public",
           table: "interactions",
+          filter: `toUserId=eq.${currentUser.id}`,
         },
         (payload) => {
           const newInt = payload.new as any;
-          if (newInt.fromUserId === currentUser.id || newInt.toUserId === currentUser.id ||
-              newInt.from_user_id === currentUser.id || newInt.to_user_id === currentUser.id) {
-            const formatted: Interaction = {
-              id: newInt.id,
-              fromUserId: newInt.fromUserId || newInt.from_user_id,
-              toUserId: newInt.toUserId || newInt.to_user_id,
-              type: newInt.type,
-              reason: newInt.reason,
-              timestamp: newInt.timestamp || newInt.created_at,
-            };
-            setInteractions((prev) => {
-              if (prev.some(i => i.id === formatted.id)) return prev;
-              return [...prev, formatted];
-            });
-          }
+          const formatted: Interaction = {
+            id: newInt.id,
+            fromUserId: newInt.fromUserId || newInt.from_user_id,
+            toUserId: newInt.toUserId || newInt.to_user_id,
+            type: newInt.type,
+            reason: newInt.reason,
+            timestamp: newInt.timestamp || newInt.created_at,
+          };
+          setInteractions((prev) => {
+            if (prev.some(i => i.id === formatted.id)) return prev;
+            return [...prev, formatted];
+          });
         }
       )
       .subscribe();
@@ -987,6 +1004,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         .upload(filePath, blob, {
           contentType: "image/jpeg",
           upsert: true,
+          cacheControl: "2592000",
         });
 
       let finalUrl = dataUrl;
@@ -1050,6 +1068,32 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return fail(error);
     }
     setInteractions(prev => [...prev, data as Interaction]);
+
+    // إرسال إشعار لحظي FCM للطرف الآخر
+    if (type === "interest") {
+      void Promise.resolve(
+        supabase.functions.invoke("send-push", {
+          body: {
+            userId: toUserId,
+            title: "اهتمام جديد بملفك الشخصي",
+            body: `أبدى عضو اهتماماً جاداً بملفك الشخصي في تطبيق مودة ورحمة.`,
+            data: { chatUserId: currentUser.id, type: "interest", url: `/profile/${currentUser.id}` },
+          },
+        })
+      ).catch(() => {});
+    } else if (type === "accept_interest") {
+      void Promise.resolve(
+        supabase.functions.invoke("send-push", {
+          body: {
+            userId: toUserId,
+            title: "تم قبول اهتمامك",
+            body: `تم قبول اهتمامك المتبادل! يمكنك الآن بدء التواصل الشرعي.`,
+            data: { chatUserId: currentUser.id, type: "accept_interest", url: `/inbox/${currentUser.id}` },
+          },
+        })
+      ).catch(() => {});
+    }
+
     return { ok: true };
   };
 
@@ -1122,6 +1166,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const recordProfileView = async (viewedId: string): Promise<void> => {
     if (!currentUser || currentUser.id === viewedId) return;
+    // منع تكرار استدعاء السيرفر وكتابة زيارات وإشعارات مكررة لنفس الملف في نفس الجلسة
+    if (viewedProfilesInSession.current.has(viewedId)) return;
+    viewedProfilesInSession.current.add(viewedId);
     try {
       await supabase.rpc("record_profile_view_rpc", { p_viewed_id: viewedId });
     } catch {
@@ -1177,10 +1224,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const filtered = profiles.filter(p => {
       if (p.id === currentUser?.id) return false;
       if (p.gender !== oppositeGender) return false;
-      // الفلترة الدينية: إظهار المتوافقين دينياً افتراضياً أو حسب الفلتر
-      if (filter.religion && p.religion && p.religion !== filter.religion) return false;
-      if (!filter.religion && currentUser?.religion && p.religion && p.religion !== currentUser.religion) return false;
-      if (filter.christianDenomination && p.christianDenomination !== filter.christianDenomination) return false;
+      // الفلترة الدينية الصارمة: منع خلط المسلمين والمسيحيين نهائياً
+      const targetReligion = (filter.religion || currentUser?.religion || "مسلم").trim();
+      if ((p.religion || "مسلم").trim() !== targetReligion) return false;
+      if (targetReligion === "مسيحي" && filter.christianDenomination && filter.christianDenomination !== "all" && p.christianDenomination !== filter.christianDenomination) return false;
       if (filter.minAge && p.age < filter.minAge) return false;
       if (filter.maxAge && p.age > filter.maxAge) return false;
       if (filter.residence && p.residence !== filter.residence) return false;
@@ -1280,6 +1327,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       p_content: text,
     });
 
+    const triggerPushNotification = (recipientId: string, messageText: string) => {
+      void Promise.resolve(
+        supabase.functions.invoke("send-push", {
+          body: {
+            userId: recipientId,
+            title: `رسالة جديدة من ${currentUser.name}`,
+            body: messageText.length > 60 ? `${messageText.slice(0, 60)}...` : messageText,
+            data: { chatUserId: currentUser.id, type: "message", url: `/inbox/${currentUser.id}` },
+          },
+        })
+      ).catch(() => {});
+    };
+
     if (!rpcError && rpcData?.ok) {
       const msg: Message = {
         id: rpcData.message_id || `msg-${Date.now()}`,
@@ -1290,6 +1350,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         isRead: false,
       };
       setMessages(prev => [...prev, msg]);
+      triggerPushNotification(toUserId, text);
       return { ok: true };
     }
 
@@ -1306,6 +1367,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (error) return fail(error);
 
     setMessages(prev => [...prev, data as Message]);
+    triggerPushNotification(toUserId, text);
     return { ok: true };
   };
 
