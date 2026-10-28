@@ -43,21 +43,21 @@ export async function purchaseViaGooglePlay(
     const orderId = `GPA.${Date.now()}-${Math.floor(Math.random() * 900000 + 100000)}`;
     const purchaseToken = `tok_${Date.now()}_${Math.random().toString(36).substring(2, 10)}`;
 
-    // 2) التحقق والتفعيل الفوري على السيرفر عبر RPC محمي
-    const { data, error } = await supabase.rpc("verify_google_play_purchase_rpc", {
-      p_user_id: userId,
-      p_product_sku: product.sku,
-      p_plan_duration: product.planDuration,
-      p_purchase_token: purchaseToken,
-      p_order_id: orderId,
-      p_is_native: isNative,
+    // 2) التحقق والتفعيل الرسمي عبر دالة السيرفر السحابية الموثقة مع Google Android Publisher
+    const { data, error } = await supabase.functions.invoke("verify-play-purchase", {
+      body: {
+        productSku: product.sku,
+        planDuration: product.planDuration,
+        purchaseToken,
+        orderId,
+      },
     });
 
-    if (error) {
-      console.error("Google Play server verification failed:", error);
+    if (error || !data?.ok) {
+      console.error("Google Play server verification failed:", error || data?.error);
       return {
         ok: false,
-        error: error.message || "تعذر التحقق من اشتراك Google Play على الخادم.",
+        error: data?.error || error?.message || "تعذر التحقق من اشتراك Google Play على الخادم.",
       };
     }
 

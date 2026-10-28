@@ -4,4 +4,7 @@ dist
 .env.*
 !.env.example
 *.local
+local.properties
+android/local.properties
+.env-*.example
 .DS_Store

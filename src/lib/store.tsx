@@ -13,6 +13,8 @@ import { INITIAL_ACADEMY_ARTICLES } from "./defaultAcademyArticles";
 import { preCheckUploadedImage } from "./photoModeration";
 import { getJourneyState } from "./marriageJourney";
 import { checkMessageSafety } from "./safetyModeration";
+import { Capacitor } from "@capacitor/core";
+import { App as CapApp } from "@capacitor/app";
 
 export interface ActionResult {
   ok: boolean;
@@ -305,9 +307,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return Boolean(p?.isOnline);
   }, [onlineUserIds, profiles]);
 
-  // ⚡ التواجد اللحظي الحقيقي (Realtime Presence)
+  // ⚡ التواجد اللحظي الحقيقي (Realtime Presence) مع احترام التصفح الخفي
   useEffect(() => {
     if (!currentUser?.id) return;
+
+    // احترام التصفح الخفي: عدم بث التواجد للأعضاء المميزين المفعلين للخاصية
+    const isIncognito = Boolean(currentUser.isPremium && currentUser.incognitoMode);
+    if (isIncognito) return;
 
     const channel = supabase.channel("online_presence_room", {
       config: { presence: { key: currentUser.id } }
@@ -335,7 +341,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       void channel.untrack();
       void supabase.removeChannel(channel);
     };
-  }, [currentUser?.id]);
+  }, [currentUser?.id, currentUser?.isPremium, currentUser?.incognitoMode]);
 
   // ⏰ فحص وإنهاء الاشتراكات المنتهية آلياً عند بدء تشغيل التطبيق
   useEffect(() => {
@@ -437,8 +443,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         Promise.resolve(supabase.from("profile_preferences").select("*").eq("user_id", userId).maybeSingle()).catch(() => ({ data: null } as any)),
         // جلب عينة خفيفة للبطاقات السريعة (30 بدلاً من 100)
         supabase.from("profiles").select("*").neq("id", userId).limit(30),
-        // رسائل المستخدم الحالي فقط وليس 500 رسالة عامة!
-        supabase.from("messages").select("*").or(`senderId.eq.${userId},receiverId.eq.${userId}`).order("timestamp", { ascending: true }).limit(100),
+        // رسائل المستخدم الحالي فقط (الأحدث أولاً ثم عكسها زمنياً)
+        supabase.from("messages").select("*").or(`senderId.eq.${userId},receiverId.eq.${userId}`).order("timestamp", { ascending: false }).limit(100),
         supabase.from("notifications").select("*").eq("userId", userId).order("timestamp", { ascending: false }).limit(40),
         supabase.from("interactions").select("*").or(`fromUserId.eq.${userId},toUserId.eq.${userId}`).limit(150),
         userIsAdmin ? supabase.from("premium_requests").select("*").order("timestamp", { ascending: false }).limit(50) : Promise.resolve({ data: [] } as any),
@@ -476,7 +482,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       if (!me) {
         const { data: myRow } = await supabase.from("profiles").select("*").eq("id", userId).maybeSingle();
         if (myRow) {
-          me = toProfile(myRow, privateById.get(userId), sensitiveById.get(userId), prefById.get(userId));
+          me = toProfile(myRow, myPrivateRes.data, mySensitiveRes.data, myPrefRes.data);
           allProfiles.push(me);
         }
       }
@@ -485,7 +491,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       if (!me) {
         const { data: createdRow } = await supabase.rpc("ensure_my_profile");
         if (createdRow) {
-          me = toProfile(createdRow, privateById.get(userId), sensitiveById.get(userId), prefById.get(userId));
+          me = toProfile(createdRow, myPrivateRes.data, mySensitiveRes.data, myPrefRes.data);
           allProfiles.push(me);
         }
       }
@@ -568,7 +574,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setIsAdmin(userIsAdmin);
       setProfiles(allProfiles);
       setCurrentUser(me);
-      setMessages((messagesRes.data ?? []) as Message[]);
+      setMessages(((messagesRes.data ?? []) as Message[]).slice().reverse());
       setNotifications((notificationsRes.data ?? []) as Notification[]);
       setInteractions((interactionsRes.data ?? []) as Interaction[]);
       setPremiumRequests((requestsRes.data ?? []) as PremiumSubscriptionRequest[]);
@@ -790,10 +796,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const signInWithGoogle = async (): Promise<ActionResult> => {
     try {
-      // ضمان تمرير رابط الأصل بشكل سليم مع slash
-      const redirectUrl = window.location.origin.endsWith("/")
-        ? window.location.origin
-        : `${window.location.origin}/`;
+      const isNative = Capacitor.isNativePlatform();
+      const redirectUrl = isNative
+        ? "com.mawada.rahma://auth-callback"
+        : (window.location.origin.endsWith("/") ? window.location.origin : `${window.location.origin}/`);
 
       const { error } = await supabase.auth.signInWithOAuth({
         provider: "google",
@@ -812,10 +818,37 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
+  // استقبال ومعالجة روابط المصادقة العميقة (Deep Links) لتطبيق الأندرويد
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform()) return;
+    const sub = CapApp.addListener("appUrlOpen", async ({ url }) => {
+      try {
+        if (url && (url.includes("access_token=") || url.includes("code="))) {
+          const rawParams = url.includes("#") ? url.split("#")[1] : url.split("?")[1];
+          const params = new URLSearchParams(rawParams);
+          const access_token = params.get("access_token");
+          const refresh_token = params.get("refresh_token");
+          if (access_token && refresh_token) {
+            await supabase.auth.setSession({ access_token, refresh_token });
+          }
+        }
+      } catch (err) {
+        console.warn("Deep link auth error:", err);
+      }
+    });
+    return () => {
+      void sub.then(handle => handle.remove());
+    };
+  }, []);
+
   const logout = async () => {
     if (currentUser) {
       await Promise.resolve(
         supabase.from("profiles").update({ isOnline: false, is_online: false, lastSeen: "الآن", last_seen: "الآن" }).eq("id", currentUser.id)
+      ).catch(() => undefined);
+      // مسح اشتراك الإشعارات اللحظية لهذا الجهاز عند تسجيل الخروج لمنع تداخل التنبيهات
+      await Promise.resolve(
+        supabase.from("push_subscriptions").delete().eq("user_id", currentUser.id)
       ).catch(() => undefined);
     }
     await supabase.auth.signOut();
@@ -938,7 +971,23 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         .select()
         .single();
       if (error) return fail(error);
-      if (data) merged = { ...merged, ...toProfile(data) };
+      if (data) {
+        const serverProfile = toProfile(data);
+        merged = {
+          ...merged,
+          ...serverProfile,
+          // الحفاظ الصارم على بيانات الخصوصية والميثاق لمنع طرد المستخدم لشاشة الميثاق
+          agreedToCharter: currentUser.agreedToCharter ?? true,
+          email: currentUser.email,
+          mobile: mobile !== undefined ? mobile : currentUser.mobile,
+          isMobileVerified: mobile !== undefined && mobile !== currentUser.mobile ? false : currentUser.isMobileVerified,
+          income: updatedData.income || currentUser.income,
+          healthStatus: updatedData.healthStatus || currentUser.healthStatus,
+          hasDisability: updatedData.hasDisability !== undefined ? updatedData.hasDisability : currentUser.hasDisability,
+          chronicDiseases: updatedData.chronicDiseases !== undefined ? updatedData.chronicDiseases : currentUser.chronicDiseases,
+          partnerSpecs: updatedData.partnerSpecs !== undefined ? updatedData.partnerSpecs : currentUser.partnerSpecs,
+        };
+      }
     }
 
     // حفظ في جداول البيانات الحساسة والتفضيلات
@@ -995,25 +1044,44 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
 
       // ضغط الصورة في المتصفح
-      const { blob, dataUrl } = await compressImage(fileOrBase64, 800, 800, 0.82);
+      const { blob } = await compressImage(fileOrBase64, 800, 800, 0.82);
 
-      // محاولة الرفع إلى Supabase Storage Bucket 'profile-photos'
+      // تنظيف الصور السابقة لتفادي استنزاف مساحة التخزين السحابي وحذف الملفات اليتيمة
+      try {
+        const { data: existingFiles } = await supabase.storage
+          .from("profile-photos")
+          .list(currentUser.id);
+        if (existingFiles && existingFiles.length > 0) {
+          const filesToRemove = existingFiles.map(f => `${currentUser.id}/${f.name}`);
+          await supabase.storage.from("profile-photos").remove(filesToRemove);
+        }
+      } catch {
+        // مواصلة الرفع إذا فشل سرد القديم
+      }
+
+      // الرفع إلى Supabase Storage Bucket 'profile-photos'
       const filePath = `${currentUser.id}/avatar_${Date.now()}.jpg`;
       const { error: uploadError } = await supabase.storage
         .from("profile-photos")
         .upload(filePath, blob, {
           contentType: "image/jpeg",
           upsert: true,
-          cacheControl: "2592000",
+          cacheControl: "86400",
         });
 
-      let finalUrl = dataUrl;
-      if (!uploadError) {
-        const { data: signedData } = await supabase.storage
-          .from("profile-photos")
-          .createSignedUrl(filePath, 60 * 60 * 24 * 365); // 1 year
-        if (signedData?.signedUrl) finalUrl = signedData.signedUrl;
+      if (uploadError) {
+        return fail(new Error("تعذر رفع الصورة إلى التخزين السحابي، يرجى التحقق من اتصالك والمحاولة لاحقاً."));
       }
+
+      const { data: signedData, error: signError } = await supabase.storage
+        .from("profile-photos")
+        .createSignedUrl(filePath, 60 * 60 * 24 * 7); // صلاحية أسبوع تتجدد ديناميكياً
+
+      if (signError || !signedData?.signedUrl) {
+        return fail(new Error("تعذر إنشاء رابط العرض المحمي للصورة."));
+      }
+
+      const finalUrl = signedData.signedUrl;
 
       // ⚖️ خط الدفاع الثاني: وضع الصورة بحالة (pending_approval)
       // تظل مخفية عن بقية المستخدمين حتى يعتمدها المشرف من لوحة الإدارة
@@ -1098,25 +1166,23 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const expressInterest = async (toUserId: string): Promise<ActionResult> => {
-    // محاولة استخدام RPC المحمي مع فحص Rate Limit
+    // استخدام RPC المحمي حصراً لمنع تخطي الـ Rate Limit
     const { error } = await supabase.rpc("express_interest_rpc", { p_target_id: toUserId });
-    if (!error) {
-      return insertInteraction(toUserId, "interest");
-    }
-    if (/rate_limit/i.test(error.message)) {
+    if (error) {
       return fail(error);
     }
     return insertInteraction(toUserId, "interest");
   };
 
   const acceptInterest = async (toUserId: string): Promise<ActionResult> => {
+    // استخدام RPC المحمي حصراً لمنع تخطي قيود الخادم
     const { error } = await supabase.rpc("accept_interest_rpc", { p_target_id: toUserId });
-    if (!error) {
-      const res = await insertInteraction(toUserId, "accept_interest");
-      if (currentUser) await loadAll(currentUser.id, true);
-      return res;
+    if (error) {
+      return fail(error);
     }
-    return insertInteraction(toUserId, "accept_interest");
+    const res = await insertInteraction(toUserId, "accept_interest");
+    if (currentUser) await loadAll(currentUser.id, true);
+    return res;
   };
 
   const ignoreProfile = (toUserId: string) => insertInteraction(toUserId, "ignore");
@@ -1354,21 +1420,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return { ok: true };
     }
 
-    if (rpcError && /rate_limit/i.test(rpcError.message)) {
-      return fail(rpcError);
-    }
-
-    // Fallback: direct insert
-    const { data, error } = await supabase
-      .from("messages")
-      .insert({ senderId: currentUser.id, receiverId: toUserId, content: text })
-      .select()
-      .single();
-    if (error) return fail(error);
-
-    setMessages(prev => [...prev, data as Message]);
-    triggerPushNotification(toUserId, text);
-    return { ok: true };
+    // إرجاع خطأ السيرفر مباشرة وعدم التخطي عبر الإدراج المباشر
+    return fail(rpcError || new Error("تعذر إرسال الرسالة، يرجى المحاولة لاحقاً."));
   };
 
   const markMessagesAsRead = (senderId: string) => {
@@ -1391,11 +1444,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         .from("messages")
         .select("*")
         .or(`and(senderId.eq.${currentUser.id},receiverId.eq.${partnerId}),and(senderId.eq.${partnerId},receiverId.eq.${currentUser.id})`)
-        .order("timestamp", { ascending: true })
+        .order("timestamp", { ascending: false })
         .limit(limit);
 
       if (error) throw error;
-      const fetched = (data ?? []) as Message[];
+      const fetched = ((data ?? []) as Message[]).slice().reverse();
       setMessages(prev => {
         const existingIds = new Set(prev.map(m => m.id));
         const newOnes = fetched.filter(m => !existingIds.has(m.id));
@@ -1468,68 +1521,39 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const requestTierVerification = async (tier: VerificationTierType, details?: string): Promise<ActionResult> => {
     if (!currentUser) return { ok: false, error: "يجب تسجيل الدخول أولاً." };
 
-    const tierLabels: Record<VerificationTierType, string> = {
-      phone: "توثيق رقم الهاتف",
-      photo: "مطابقة الصورة الشخصية",
-      id: "التحقق من الهوية الرسمية",
-      docs: "مراجعة المستندات الإضافية",
-    };
-
     try {
-      const { error } = await supabase.from("notifications").insert({
-        userId: currentUser.id,
-        type: "verify_request",
-        senderId: currentUser.id,
-        senderName: currentUser.name,
-        content: `طلب توثيق جديد: (${tierLabels[tier]})${details ? ` - تفاصيل: ${details}` : ""}`,
+      const { data, error } = await supabase.rpc("submit_tier_verification_rpc", {
+        p_tier: tier === "id" ? "identity" : tier === "docs" ? "academic" : "family",
+        p_document_url: "submitted_via_app",
+        p_notes: details || "",
       });
       if (error) return fail(error);
-      return { ok: true };
+      return { ok: true, data };
     } catch (err) {
       return fail(err);
     }
   };
 
   const adminUpdateTierVerification = async (userId: string, tier: VerificationTierType, verified: boolean): Promise<ActionResult> => {
-    const fieldMap: Record<VerificationTierType, string> = {
-      phone: "is_mobile_verified",
-      photo: "is_photo_verified",
-      id: "is_id_verified",
-      docs: "is_docs_verified",
-    };
+    if (!isAdmin) return { ok: false, error: "صلاحية الأدمن مطلوبة." };
 
-    const fieldName = fieldMap[tier];
     try {
-      const { error } = await supabase
-        .from("profiles")
-        .update({ [fieldName]: verified, ...(tier === "id" ? { is_verified: verified } : {}) })
-        .eq("id", userId);
-      if (error) return fail(error);
+      if (tier === "id" && verified) {
+        const { error } = await supabase.rpc("admin_verify_user", { p_user_id: userId });
+        if (error) return fail(error);
+      } else {
+        const { error } = await supabase.rpc("admin_review_tier_verification_rpc", {
+          p_request_id: userId,
+          p_approved: verified,
+          p_notes: verified ? "تم الاعتماد من الإدارة" : "تم الرفض لعدم استيفاء الشروط",
+        });
+        if (error) return fail(error);
+      }
+      if (currentUser) await loadAll(currentUser.id, true);
+      return { ok: true };
     } catch (err) {
       return fail(err);
     }
-
-    setProfiles(prev => prev.map(p => {
-      if (p.id !== userId) return p;
-      if (tier === "phone") return { ...p, isMobileVerified: verified };
-      if (tier === "photo") return { ...p, isPhotoVerified: verified };
-      if (tier === "id") return { ...p, isIdVerified: verified, isVerified: verified };
-      if (tier === "docs") return { ...p, isDocsVerified: verified };
-      return p;
-    }));
-
-    if (currentUser?.id === userId) {
-      setCurrentUser(prev => {
-        if (!prev) return prev;
-        if (tier === "phone") return { ...prev, isMobileVerified: verified };
-        if (tier === "photo") return { ...prev, isPhotoVerified: verified };
-        if (tier === "id") return { ...prev, isIdVerified: verified, isVerified: verified };
-        if (tier === "docs") return { ...prev, isDocsVerified: verified };
-        return prev;
-      });
-    }
-
-    return { ok: true };
   };
 
   const adminApprovePremium = (requestId: string) =>
@@ -2148,110 +2172,132 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
 
+  const contextValue = useMemo<AppContextType>(() => ({
+    currentUser,
+    isAdmin,
+    profiles,
+    messages,
+    notifications,
+    successStories,
+    interactions,
+    premiumRequests,
+    guardianStatus,
+    mySurvey,
+    allSurveys,
+    profileEditRequests,
+    dbError,
+    actionError,
+    isAuthReady,
+    isSupabaseLoading,
+
+    requestEmailOtp,
+    verifyEmailOtp,
+    signInWithGoogle,
+    submitCharterAgreement,
+    saveProfile,
+    updateProfile,
+    updateAvatar,
+    uploadCustomImage,
+    updatePhotoPrivacy,
+    toggleIncognitoMode,
+    deleteMyAccount,
+    cancelAccountDeletion,
+    logout,
+    clearActionError,
+
+    expressInterest,
+    acceptInterest,
+    ignoreProfile,
+    unignoreProfile,
+    blockProfile,
+    reportProfile,
+    recordProfileView,
+
+    sendMessage,
+    markMessagesAsRead,
+    fetchConversationMessages,
+    onlineUserIds,
+    isUserOnline,
+    searchProfiles,
+    fetchProfileById,
+
+    markNotificationAsRead,
+    markAllNotificationsAsRead,
+
+    submitPremiumRequest,
+    requestTierVerification,
+    adminUpdateTierVerification,
+
+    adminApprovePremium,
+    adminRejectPremium,
+    adminVerifyUser,
+    adminDeleteUser,
+    adminApproveStory,
+    adminAddStory,
+    retryLoadData,
+
+    // Guardian & Family Oversight
+    fetchGuardianStatus,
+    createGuardianInvitation,
+    acceptGuardianInvitation,
+    revokeGuardianLink,
+    updateGuardianPermissions,
+
+    // Compatibility Survey & Red Flags
+    saveCompatibilitySurvey,
+    fetchCompatibilitySurvey,
+
+    // Profile Edit Requests
+    submitProfileEditRequest,
+    adminReviewProfileEditRequest,
+
+    // Coupons & Discounts
+    coupons,
+    adminCreateCoupon,
+    adminToggleCoupon,
+    adminDeleteCoupon,
+
+    // Broadcasts
+    adminSendBroadcast,
+
+    // Direct Premium
+    adminGrantPremium,
+    adminRevokePremium,
+
+    // Academy — أكاديمية الاستعداد للزواج
+    academyArticles,
+    fetchAcademyArticles,
+    markArticleRead,
+    rateArticle,
+    submitMarriageQuizResult,
+
+    // Photo Moderation & Defense
+    adminApprovePhoto,
+    adminRejectPhoto,
+  }), [
+    currentUser,
+    isAdmin,
+    profiles,
+    messages,
+    notifications,
+    successStories,
+    interactions,
+    premiumRequests,
+    guardianStatus,
+    mySurvey,
+    allSurveys,
+    profileEditRequests,
+    dbError,
+    actionError,
+    isAuthReady,
+    isSupabaseLoading,
+    onlineUserIds,
+    coupons,
+    academyArticles,
+  ]);
+
   return (
-    <AppContext.Provider value={{
-      currentUser,
-      isAdmin,
-      profiles,
-      messages,
-      notifications,
-      successStories,
-      interactions,
-      premiumRequests,
-      guardianStatus,
-      mySurvey,
-      allSurveys,
-      profileEditRequests,
-      dbError,
-      actionError,
-      isAuthReady,
-      isSupabaseLoading,
-
-      requestEmailOtp,
-      verifyEmailOtp,
-      signInWithGoogle,
-      submitCharterAgreement,
-      saveProfile,
-      updateProfile,
-      updateAvatar,
-      uploadCustomImage,
-      updatePhotoPrivacy,
-      toggleIncognitoMode,
-      deleteMyAccount,
-      cancelAccountDeletion,
-      logout,
-      clearActionError,
-
-      expressInterest,
-      acceptInterest,
-      ignoreProfile,
-      unignoreProfile,
-      blockProfile,
-      reportProfile,
-      recordProfileView,
-
-      sendMessage,
-      markMessagesAsRead,
-      fetchConversationMessages,
-      onlineUserIds,
-      isUserOnline,
-      searchProfiles,
-      fetchProfileById,
-
-      markNotificationAsRead,
-      markAllNotificationsAsRead,
-
-      submitPremiumRequest,
-      requestTierVerification,
-      adminUpdateTierVerification,
-
-      adminApprovePremium,
-      adminRejectPremium,
-      adminVerifyUser,
-      adminDeleteUser,
-      adminApproveStory,
-      adminAddStory,
-      retryLoadData,
-
-      // Guardian & Family Oversight
-      fetchGuardianStatus,
-      createGuardianInvitation,
-      acceptGuardianInvitation,
-      revokeGuardianLink,
-      updateGuardianPermissions,
-
-      // Compatibility Survey & Red Flags
-      saveCompatibilitySurvey,
-      fetchCompatibilitySurvey,
-
-      // Profile Edit Requests
-      submitProfileEditRequest,
-      adminReviewProfileEditRequest,
-
-      // Coupons & Discounts
-      coupons,
-      adminCreateCoupon,
-      adminToggleCoupon,
-      adminDeleteCoupon,
-
-      // Broadcasts
-      adminSendBroadcast,
-
-      // Direct Premium
-      adminGrantPremium,
-      adminRevokePremium,
-
-      // Academy — أكاديمية الاستعداد للزواج
-      academyArticles,
-      fetchAcademyArticles,
-      markArticleRead,
-      rateArticle,
-      submitMarriageQuizResult,
-
-      // Photo Moderation & Defense
-      adminApprovePhoto,
-      adminRejectPhoto,
-    }}>
+    <AppContext.Provider value={contextValue}>
       {children}
     </AppContext.Provider>
   );

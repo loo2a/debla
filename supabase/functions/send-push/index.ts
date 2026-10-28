@@ -92,6 +92,7 @@ Deno.serve(async (req) => {
     // التحقق الأمني من هوية المستدعي (يمنع المتطفلين والمفتاح العام من إرسال إشعارات)
     const token = authHeader.replace(/^Bearer\s+/i, "");
     const isServiceRole = token === supabaseServiceKey;
+    let callingUserId: string | null = null;
     if (!isServiceRole) {
       const { data: authUser, error: authErr } = await supabase.auth.getUser(token);
       if (authErr || !authUser?.user) {
@@ -100,12 +101,25 @@ Deno.serve(async (req) => {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
+      callingUserId = authUser.user.id;
     }
 
     const rawBody = await req.json();
 
     // دعم الاستدعاء المباشر أو الاستدعاء عبر Supabase Database Webhook (record)
     const isWebhook = Boolean(rawBody.record);
+    const webhookSecret = Deno.env.get("WEBHOOK_SECRET");
+
+    // التحقق من أمان الـ Webhook: يمنع تزييف أحداث قاعدة البيانات دون مفتاح الخدمة أو السر المشترك
+    if (isWebhook && !isServiceRole) {
+      const providedSecret = req.headers.get("x-webhook-secret");
+      if (!webhookSecret || providedSecret !== webhookSecret) {
+        return new Response(JSON.stringify({ error: "Forbidden: Invalid webhook secret" }), {
+          status: 403,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+    }
     const userId = isWebhook ? (rawBody.record.userId || rawBody.record.user_id) : rawBody.userId;
     const title = isWebhook 
       ? (rawBody.record.senderName || rawBody.record.sender_name 
@@ -129,6 +143,20 @@ Deno.serve(async (req) => {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
+    }
+
+    // التحقق من أن المستخدم المستدعي غير محظور ولا يرسل إشعارات عشوائية
+    if (callingUserId && callingUserId !== userId) {
+      const { data: isBlocked } = await supabase.rpc("is_blocked_between", {
+        a: callingUserId,
+        b: userId,
+      });
+      if (isBlocked) {
+        return new Response(JSON.stringify({ error: "Forbidden: Cannot send push to this user" }), {
+          status: 403,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
     }
 
     // 1. البحث عن توكن هاتف المستخدم

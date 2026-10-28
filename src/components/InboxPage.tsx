@@ -51,14 +51,12 @@ export const InboxPage: React.FC<InboxPageProps> = ({
   const [typedMessage, setTypedMessage] = useState("");
   const chatBottomRef = useRef<HTMLDivElement>(null);
 
-  if (!currentUser) return null;
-
   const createFallbackPartner = (partnerId: string): UserProfile => ({
     id: partnerId,
     memberNumber: partnerId.slice(0, 8),
     name: "طرف المحادثة",
-    gender: currentUser.gender === Gender.MALE ? Gender.FEMALE : Gender.MALE,
-    avatar: currentUser.gender === Gender.MALE ? "female_1" : "male_1",
+    gender: currentUser?.gender === Gender.MALE ? Gender.FEMALE : Gender.MALE,
+    avatar: currentUser?.gender === Gender.MALE ? "female_1" : "male_1",
     profileImage: null,
     isMobileVerified: false,
     agreedToCharter: true,
@@ -197,7 +195,9 @@ export const InboxPage: React.FC<InboxPageProps> = ({
   };
 
   // Filter user notifications
-  const myNotifications = notifications.filter(n => n.userId === currentUser.id);
+  const myNotifications = currentUser ? notifications.filter(n => n.userId === currentUser.id) : [];
+
+  if (!currentUser) return null;
 
   return (
     <div className="pb-24 pt-4 font-sans text-right bg-slate-50 min-h-screen" dir="rtl">

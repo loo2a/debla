@@ -30,16 +30,14 @@ export const SearchPage: React.FC<SearchPageProps> = ({ onSelectProfile }) => {
     setTotalCount((prev) => Math.max(0, prev - 1));
   };
 
-  if (!currentUser) return null;
-
-  const oppositeGender = currentUser.gender === Gender.MALE ? Gender.FEMALE : Gender.MALE;
-  const userReligion = currentUser.religion || "مسلم";
+  const oppositeGender = currentUser?.gender === Gender.MALE ? Gender.FEMALE : Gender.MALE;
+  const userReligion = currentUser?.religion || "مسلم";
 
   const [filter, setFilter] = useState<SearchFilterState>({
     nationality: "all",
     residence: "all",
     religion: userReligion,
-    christianDenomination: currentUser.christianDenomination || "all",
+    christianDenomination: currentUser?.christianDenomination || "all",
     ageFrom: 18,
     ageTo: 65,
     maritalStatus: "all",
@@ -120,6 +118,8 @@ export const SearchPage: React.FC<SearchPageProps> = ({ onSelectProfile }) => {
       clearTimeout(timer);
     };
   }, [filter, currentPage, oppositeGender, searchProfiles]);
+
+  if (!currentUser) return null;
 
   return (
     <div className="pb-24 pt-4 font-sans text-right bg-slate-50 min-h-screen" dir="rtl">

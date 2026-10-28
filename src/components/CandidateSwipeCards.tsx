@@ -22,15 +22,14 @@ export const CandidateSwipeCards: React.FC<CandidateSwipeCardsProps> = ({ onOpen
   const { addToast } = useUIStore();
   const navigate = useNavigate();
 
-  if (!currentUser) return null;
-
   // اليوم الحالي لتحديد الحد اليومي (5 للمجاني، 20 للمميز)
   const todayKey = useMemo(() => {
-    return `mawada_swipes_${currentUser.id}_${new Date().toISOString().slice(0, 10)}`;
-  }, [currentUser.id]);
+    return currentUser ? `mawada_swipes_${currentUser.id}_${new Date().toISOString().slice(0, 10)}` : "";
+  }, [currentUser?.id]);
 
   // استرجاع السجلات المسحوبة اليوم من التخزين المحلي
   const [swipedTodayIds, setSwipedTodayIds] = useState<string[]>(() => {
+    if (!todayKey) return [];
     try {
       const saved = localStorage.getItem(todayKey);
       return saved ? JSON.parse(saved) : [];
@@ -41,6 +40,7 @@ export const CandidateSwipeCards: React.FC<CandidateSwipeCardsProps> = ({ onOpen
 
   // مزامنة التخزين المحلي عند تغيير المسحوبين
   const recordSwipe = (id: string) => {
+    if (!todayKey) return;
     setSwipedTodayIds((prev) => {
       if (prev.includes(id)) return prev;
       const updated = [...prev, id];
@@ -52,10 +52,11 @@ export const CandidateSwipeCards: React.FC<CandidateSwipeCardsProps> = ({ onOpen
   };
 
   // الحد الأقصى للمرشحين حسب نوع الحساب
-  const maxCandidatesLimit = currentUser.isPremium ? 20 : 5;
+  const maxCandidatesLimit = currentUser?.isPremium ? 20 : 5;
 
   // قائمة المرشحين المحسوبة
   const recommendedList = useMemo(() => {
+    if (!currentUser) return [];
     return getRecommendedCandidates(currentUser, profiles, interactions, swipedTodayIds, mySurvey, allSurveys);
   }, [currentUser, profiles, interactions, swipedTodayIds, mySurvey, allSurveys]);
 
@@ -68,6 +69,8 @@ export const CandidateSwipeCards: React.FC<CandidateSwipeCardsProps> = ({ onOpen
   const rotate = useTransform(x, [-200, 200], [-18, 18]);
   const opacityStampYes = useTransform(x, [20, 100], [0, 1]);
   const opacityStampNo = useTransform(x, [-100, -20], [1, 0]);
+
+  if (!currentUser) return null;
 
   // المرشح الحالي في أعلى الكومة
   const currentCandidate = recommendedList[0];

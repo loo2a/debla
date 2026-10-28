@@ -4,6 +4,7 @@ import { Sparkles, CheckCircle2, CreditCard, Smartphone, ShieldAlert, Tag, Check
 import { Capacitor } from "@capacitor/core";
 import { useUIStore } from "../stores/uiStore";
 import { purchaseViaGooglePlay } from "../lib/googlePlayBilling";
+import { supabase } from "../lib/supabase";
 
 export const PremiumPage: React.FC = () => {
   const { currentUser, submitPremiumRequest, premiumRequests, coupons, retryLoadData } = useApp();
@@ -53,21 +54,21 @@ export const PremiumPage: React.FC = () => {
     "أولوية في الدعم الفني والمساعدة في التوفيق الأسري الشرعي.",
   ];
 
-  const handleApplyCoupon = (e: React.FormEvent) => {
+  const handleApplyCoupon = async (e: React.FormEvent) => {
     e.preventDefault();
     const clean = promoCodeInput.trim().toUpperCase();
     if (!clean) return;
 
-    const found = coupons.find(c => c.code.toUpperCase() === clean && c.isActive);
-    if (found) {
-      if (found.validUntil && new Date(found.validUntil) < new Date()) {
-        addToast("هذا الكوبون انتهت صلاحيته.", "error");
-        return;
+    try {
+      const { data, error } = await supabase.rpc("verify_coupon_rpc", { p_code: clean });
+      if (!error && data?.ok) {
+        setAppliedCoupon({ code: data.code, discountPercent: data.discountPercent });
+        addToast(`تم تطبيق كود الخصم بنجاح! تم خصم ${data.discountPercent}% من قيمة الاشتراك.`, "success");
+      } else {
+        addToast(data?.error || "كود الخصم غير صحيح أو لم يعد متاحاً.", "error");
       }
-      setAppliedCoupon({ code: found.code, discountPercent: found.discountPercent });
-      addToast(`تم تطبيق كود الخصم بنجاح! تم خصم ${found.discountPercent}% من قيمة الاشتراك.`, "success");
-    } else {
-      addToast("كود الخصم غير صحيح أو لم يعد متاحاً.", "error");
+    } catch {
+      addToast("تعذر التحقق من كود الخصم حالياً.", "error");
     }
   };
 
