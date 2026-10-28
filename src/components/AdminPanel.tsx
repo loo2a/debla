@@ -532,23 +532,23 @@ export const AdminPanel: React.FC = () => {
 
                         <button
                           type="button"
-                          onClick={async () => {
+                          onClick={() => {
                             if (!report.toUserId) return;
-                            const confirmed = await showConfirm({
+                            showConfirm({
                               title: "حظر وتعطيل حساب العضو",
                               message: `هل أنت متأكد من حظر حساب ${reportedUser?.name || "هذا العضو"} وإيقافه عن استخدام المنصة؟`,
                               confirmText: "نعم، احظر الحساب",
                               cancelText: "تراجع",
-                              type: "danger"
+                              isDangerous: true,
+                              onConfirm: async () => {
+                                const res = await adminDeleteUser(report.toUserId);
+                                if (res.ok) {
+                                  addToast("تم حظر العضو وإيقاف حسابه بنجاح.", "success");
+                                } else {
+                                  addToast(res.error || "تعذر تنفيذ الحظر.", "error");
+                                }
+                              },
                             });
-                            if (!confirmed) return;
-
-                            const res = await adminDeleteUser(report.toUserId);
-                            if (res.ok) {
-                              addToast("تم حظر العضو وإيقاف حسابه بنجاح.", "success");
-                            } else {
-                              addToast(res.error || "تعذر تنفيذ الحظر.", "error");
-                            }
                           }}
                           className="flex-1 py-2 px-3 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold transition flex items-center justify-center gap-1"
                         >
