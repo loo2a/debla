@@ -15,10 +15,13 @@ export const useGuardianActions = (
   const fetchGuardianStatus = async (): Promise<GuardianLinkStatus | null> => {
     if (!userId) return null;
     try {
-      const { data, error } = await supabase.rpc("get_guardian_status_rpc");
-      if (error || !data) return null;
+      const { data, error } = await supabase.rpc("get_my_guardian_status_rpc");
+      if (error || !data || data.has_link === false) {
+        setGuardianStatus(null);
+        return null;
+      }
       const status: GuardianLinkStatus = {
-        role: data.role || "ward",
+        role: data.role || (data.is_guardian ? "guardian" : "ward"),
         linkId: data.link_id,
         partnerId: data.partner_id,
         partnerName: data.partner_name || "الطرف الآخر",
