@@ -1,8 +1,9 @@
+import { useState, useCallback } from "react";
 import {
   UserProfile, SuccessStory, ProfileEditRequest,
-  Coupon, AdminBroadcastMessage, VerificationTierType
+  Coupon, AdminBroadcastMessage, VerificationTierType, ContactMessage
 } from "../../types";
-import { ActionResult } from "./types";
+import { ActionResult, BannedEntity, RecurrentEvader } from "./types";
 import { supabase } from "../supabase";
 import { toErrorMessage } from "./mappers";
 
@@ -22,6 +23,165 @@ export const useAdminActions = (
   setCurrentUser: React.Dispatch<React.SetStateAction<UserProfile | null>>,
   setCoupons: React.Dispatch<React.SetStateAction<Coupon[]>>
 ) => {
+  const [bannedList, setBannedList] = useState<BannedEntity[]>([]);
+  const [recurrentEvaders, setRecurrentEvaders] = useState<RecurrentEvader[]>([]);
+  const [contactMessages, setContactMessages] = useState<ContactMessage[]>([]);
+
+  const fetchContactMessages = useCallback(async (): Promise<void> => {
+    if (!isAdmin) return;
+    try {
+      const { data, error } = await supabase
+        .from("contact_messages")
+        .select("*")
+        .order("created_at", { ascending: false })
+        .limit(100);
+      if (!error && data) {
+        setContactMessages(data.map((m: any) => ({
+          id: m.id,
+          userId: m.user_id,
+          senderName: m.sender_name,
+          senderEmail: m.sender_email,
+          subject: m.subject,
+          message: m.message,
+          status: m.status || "unread",
+          adminNotes: m.admin_notes,
+          createdAt: m.created_at,
+          readAt: m.read_at,
+        })));
+      }
+    } catch {
+      // Non-blocking
+    }
+  }, [isAdmin]);
+
+  const sendContactMessage = useCallback(async (
+    subject: string,
+    message: string,
+    senderName?: string,
+    senderEmail?: string
+  ): Promise<ActionResult> => {
+    const cleanSubject = subject.trim();
+    const cleanMessage = message.trim();
+    if (cleanSubject.length < 2) return { ok: false, error: "عنوان الرسالة قصير جداً (حرفين على الأقل)." };
+    if (cleanSubject.length > 50) return { ok: false, error: "عنوان الرسالة يجب ألا يتجاوز 50 حرفاً أو رمزاً." };
+    if (cleanMessage.length < 5) return { ok: false, error: "نص الرسالة قصير جداً (5 أحرف على الأقل)." };
+    if (cleanMessage.length > 240) return { ok: false, error: "نص الرسالة يجب ألا يتجاوز 240 حرفاً أو رمزاً." };
+
+    try {
+      const { data, error } = await supabase.rpc("submit_contact_message_rpc", {
+        p_subject: cleanSubject,
+        p_message: cleanMessage,
+        p_sender_name: senderName || currentUser?.name || null,
+        p_sender_email: senderEmail || currentUser?.email || null,
+      });
+
+      if (!error && data?.ok) {
+        return { ok: true, data };
+      }
+
+      // Fallback direct table insert
+      const { error: insErr } = await supabase.from("contact_messages").insert({
+        user_id: currentUser?.id || null,
+        sender_name: senderName || currentUser?.name || "مستخدم",
+        sender_email: senderEmail || currentUser?.email || null,
+        subject: cleanSubject,
+        message: cleanMessage,
+        status: "unread",
+      });
+      if (insErr) return fail(insErr);
+      return { ok: true };
+    } catch (err) {
+      return fail(err);
+    }
+  }, [currentUser]);
+
+  const adminUpdateContactMessageStatus = useCallback(async (
+    messageId: string,
+    status: "unread" | "read" | "replied" | "archived",
+    notes?: string
+  ): Promise<ActionResult> => {
+    if (!isAdmin) return { ok: false, error: "صلاحية الإدارة مطلوبة." };
+    try {
+      const updates: Record<string, any> = { 
+        status,
+        ...(status === "read" || status === "replied" ? { read_at: new Date().toISOString() } : {})
+      };
+      if (notes !== undefined) {
+        updates.admin_notes = notes;
+      }
+      const { error } = await supabase
+        .from("contact_messages")
+        .update(updates)
+        .eq("id", messageId);
+      if (error) return fail(error);
+
+      setContactMessages(prev => prev.map(m => m.id === messageId ? { ...m, ...updates } : m));
+      return { ok: true };
+    } catch (err) {
+      return fail(err);
+    }
+  }, [isAdmin]);
+
+  const fetchBannedList = useCallback(async (): Promise<void> => {
+    if (!isAdmin) return;
+    try {
+      const { data, error } = await supabase.rpc("admin_get_banned_list_rpc");
+      if (!error && Array.isArray(data)) {
+        setBannedList(data as BannedEntity[]);
+      }
+    } catch {
+      // Non-blocking
+    }
+  }, [isAdmin]);
+
+  const fetchRecurrentEvaders = useCallback(async (): Promise<void> => {
+    if (!isAdmin) return;
+    try {
+      const { data, error } = await supabase.rpc("admin_get_recurrent_evaders_rpc");
+      if (!error && Array.isArray(data)) {
+        setRecurrentEvaders(data as RecurrentEvader[]);
+      }
+    } catch {
+      // Non-blocking
+    }
+  }, [isAdmin]);
+
+  const adminBanUser = useCallback(async (
+    userId: string,
+    banType: "email" | "device",
+    reason = "مخالفة ميثاق الاستخدام والوقار"
+  ): Promise<ActionResult> => {
+    if (!isAdmin) return { ok: false, error: "صلاحية الإدارة مطلوبة." };
+    try {
+      const { data, error } = await supabase.rpc("admin_ban_user_rpc", {
+        p_user_id: userId,
+        p_ban_type: banType,
+        p_reason: reason.trim(),
+      });
+      if (error) return fail(error);
+      setProfiles(prev => prev.filter(p => p.id !== userId));
+      await fetchBannedList();
+      await fetchRecurrentEvaders();
+      if (currentUser) await loadAll(currentUser.id, true);
+      return { ok: true, data };
+    } catch (err) {
+      return fail(err);
+    }
+  }, [isAdmin, currentUser, loadAll, setProfiles, fetchBannedList, fetchRecurrentEvaders]);
+
+  const adminUnban = useCallback(async (banId: string): Promise<ActionResult> => {
+    if (!isAdmin) return { ok: false, error: "صلاحية الإدارة مطلوبة." };
+    try {
+      const { error } = await supabase.rpc("admin_unban_rpc", { p_ban_id: banId });
+      if (error) return fail(error);
+      setBannedList(prev => prev.map(b => b.id === banId ? { ...b, isActive: false } : b));
+      await fetchRecurrentEvaders();
+      return { ok: true };
+    } catch (err) {
+      return fail(err);
+    }
+  }, [isAdmin, fetchRecurrentEvaders]);
+
   const runAdminAction = async (fn: string, args: Record<string, any>): Promise<ActionResult> => {
     if (!isAdmin) return { ok: false, error: "صلاحية الأدمن مطلوبة." };
     const { error } = await supabase.rpc(fn, args);
@@ -360,5 +520,15 @@ export const useAdminActions = (
     adminRevokePremium,
     adminApprovePhoto,
     adminRejectPhoto,
+    bannedList,
+    recurrentEvaders,
+    adminBanUser,
+    adminUnban,
+    fetchBannedList,
+    fetchRecurrentEvaders,
+    contactMessages,
+    sendContactMessage,
+    adminUpdateContactMessageStatus,
+    fetchContactMessages,
   };
 };

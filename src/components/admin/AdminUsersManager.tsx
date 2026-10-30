@@ -5,7 +5,7 @@ import { getUserVerificationTiers } from "../../lib/verificationTiers";
 import { VerificationTierType } from "../../types";
 import { 
   Search, ShieldCheck, Award, Trash2, Camera, Smartphone, 
-  FileCheck2, Check, X, Sparkles, Filter, Calendar, Eye
+  FileCheck2, Check, X, Sparkles, Filter, Calendar, Eye, Ban, Mail
 } from "lucide-react";
 import { useApp } from "../../lib/store";
 import { useUIStore } from "../../stores/uiStore";
@@ -17,7 +17,7 @@ interface AdminUsersManagerProps {
 export const AdminUsersManager: React.FC<AdminUsersManagerProps> = ({ onSelectUserForBroadcast }) => {
   const { 
     profiles, adminVerifyUser, adminUpdateTierVerification,
-    adminDeleteUser, adminGrantPremium, adminRevokePremium 
+    adminDeleteUser, adminGrantPremium, adminRevokePremium, adminBanUser 
   } = useApp();
   const { addToast, showConfirm } = useUIStore();
 
@@ -25,6 +25,12 @@ export const AdminUsersManager: React.FC<AdminUsersManagerProps> = ({ onSelectUs
   const [filterType, setFilterType] = useState<"all" | "premium" | "regular" | "verified" | "unverified">("all");
   const [filterGender, setFilterGender] = useState<"all" | "male" | "female">("all");
   const [quickGrantDays, setQuickGrantDays] = useState<Record<string, number>>({});
+
+  // Ban Modal State
+  const [banModalUser, setBanModalUser] = useState<UserProfile | null>(null);
+  const [banType, setBanType] = useState<"email" | "device">("email");
+  const [banReason, setBanReason] = useState("مخالفة ميثاق الاستخدام والوقار");
+  const [isBanning, setIsBanning] = useState(false);
 
   const filteredUsers = profiles.filter(user => {
     if (!user.name) return false;
@@ -152,6 +158,17 @@ export const AdminUsersManager: React.FC<AdminUsersManagerProps> = ({ onSelectUs
                     )}
                     <button
                       onClick={() => {
+                        setBanModalUser(user);
+                        setBanType("email");
+                        setBanReason("مخالفة ميثاق الاستخدام والوقار");
+                      }}
+                      className="p-1.5 text-slate-400 hover:text-rose-700 hover:bg-rose-50 rounded-lg transition"
+                      title="حظر متدرج (إيميل أو جهاز)"
+                    >
+                      <Ban className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={() => {
                         showConfirm({
                           title: "حذف العضو",
                           message: `هل أنت متأكد من حذف حساب (${user.name}) بالكامل من النظام؟`,
@@ -275,6 +292,124 @@ export const AdminUsersManager: React.FC<AdminUsersManagerProps> = ({ onSelectUs
           })
         )}
       </div>
+
+      {/* Ban Modal */}
+      {banModalUser && (
+        <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-md w-full p-6 space-y-4 shadow-xl border border-slate-100 text-right">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <h3 className="font-bold text-slate-800 text-sm flex items-center gap-2">
+                <Ban className="w-4 h-4 text-rose-600" />
+                <span>حظر المستخدم: {banModalUser.name}</span>
+              </h3>
+              <button 
+                onClick={() => setBanModalUser(null)}
+                className="p-1 text-slate-400 hover:text-slate-600 rounded-lg cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="space-y-4 text-xs">
+              <div className="bg-slate-50 p-3 rounded-xl border border-slate-100 text-slate-600 space-y-1">
+                <p>العضو: <span className="font-bold text-slate-800">{banModalUser.name}</span> ({banModalUser.memberNumber})</p>
+                {banModalUser.email && <p>البريد: <span className="font-mono text-slate-700">{banModalUser.email}</span></p>}
+              </div>
+
+              <div>
+                <label className="block text-slate-700 font-bold mb-1">اختر درجة الحظر:</label>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setBanType("email")}
+                    className={`p-3 rounded-xl border text-right transition cursor-pointer ${
+                      banType === "email" 
+                        ? "bg-amber-50 border-amber-300 text-amber-900 shadow-xs" 
+                        : "bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100"
+                    }`}
+                  >
+                    <div className="flex items-center gap-1.5 font-bold mb-1">
+                      <Mail className="w-3.5 h-3.5 text-amber-600" />
+                      <span>حظر الإيميل</span>
+                    </div>
+                    <p className="text-[10px] text-slate-500 leading-relaxed">
+                      منع تسجيل حساب جديد بنفس البريد، مع حذف حسابه الحالي.
+                    </p>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setBanType("device")}
+                    className={`p-3 rounded-xl border text-right transition cursor-pointer ${
+                      banType === "device" 
+                        ? "bg-rose-50 border-rose-300 text-rose-900 shadow-xs" 
+                        : "bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100"
+                    }`}
+                  >
+                    <div className="flex items-center gap-1.5 font-bold mb-1">
+                      <Smartphone className="w-3.5 h-3.5 text-rose-600" />
+                      <span>حظر الجهاز كاملاً</span>
+                    </div>
+                    <p className="text-[10px] text-slate-500 leading-relaxed">
+                      حظر معرّف الجهاز (Android ID) لمنع أي حساب من نفس الهاتف.
+                    </p>
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-slate-700 font-bold mb-1">سبب الحظر:</label>
+                <input
+                  type="text"
+                  value={banReason}
+                  onChange={(e) => setBanReason(e.target.value)}
+                  placeholder="سبب الحظر..."
+                  required
+                  className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-rose-500/20"
+                />
+              </div>
+
+              <div className="pt-2 flex items-center justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setBanModalUser(null)}
+                  className="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-bold cursor-pointer"
+                >
+                  إلغاء
+                </button>
+                <button
+                  type="button"
+                  disabled={isBanning}
+                  onClick={async () => {
+                    if (!banModalUser) return;
+                    setIsBanning(true);
+                    try {
+                      const res = await adminBanUser(banModalUser.id, banType, banReason);
+                      if (res.ok) {
+                        addToast(
+                          banType === "device" 
+                            ? `تم حظر جهاز (${banModalUser.name}) كاملاً وحذف الحساب.` 
+                            : `تم حظر بريد (${banModalUser.name}) وحذف الحساب.`,
+                          "success"
+                        );
+                        setBanModalUser(null);
+                      } else {
+                        addToast(res.error || "فشل تنفيذ الحظر", "error");
+                      }
+                    } finally {
+                      setIsBanning(false);
+                    }
+                  }}
+                  className="px-4 py-2 bg-rose-600 hover:bg-rose-700 disabled:opacity-50 text-white rounded-xl font-bold transition flex items-center gap-1.5 cursor-pointer"
+                >
+                  <Ban className="w-3.5 h-3.5" />
+                  <span>{isBanning ? "جاري التنفيذ..." : "تأكيد وتنفيذ الحظر"}</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

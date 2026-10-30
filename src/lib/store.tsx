@@ -10,7 +10,8 @@ import {
 import { supabase } from "./supabase";
 import { INITIAL_ACADEMY_ARTICLES } from "./defaultAcademyArticles";
 import {
-  ActionResult, PlanDuration, PaymentMethod, AppContextType
+  ActionResult, PlanDuration, PaymentMethod, AppContextType,
+  BannedEntity, RecurrentEvader
 } from "./store/types";
 import {
   LEGACY_STORAGE_KEYS, toProfile, toErrorMessage
@@ -23,8 +24,9 @@ import { useGuardianActions } from "./store/useGuardianActions";
 import { useSurveyActions } from "./store/useSurveyActions";
 import { useAcademyActions } from "./store/useAcademyActions";
 import { useAdminActions } from "./store/useAdminActions";
+import { checkDeviceOrEmailBan, registerDeviceSession } from "./deviceSecurity";
 
-export type { ActionResult, PlanDuration, PaymentMethod, AppContextType };
+export type { ActionResult, PlanDuration, PaymentMethod, AppContextType, BannedEntity, RecurrentEvader };
 export { LOCKED_IDENTITY_KEYS, SERVER_MANAGED_KEYS, toProfile } from "./store/mappers";
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -134,6 +136,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setIsSupabaseLoading(true);
 
     try {
+      // فحص الحظر للجهاز أو الإيميل فوراً عند تحميل الجلسة
+      const banCheck = await checkDeviceOrEmailBan();
+      if (banCheck.isBanned) {
+        await supabase.auth.signOut();
+        resetState();
+        setActionError(banCheck.reason || "تم حظر هذا الجهاز أو الحساب من استخدام المنصة لمخالفة ميثاق الوقار.");
+        setIsSupabaseLoading(false);
+        setIsAuthReady(true);
+        return;
+      }
+      void registerDeviceSession(userId);
+
       const { data: isAdminData } = await supabase.rpc("is_admin");
       const userIsAdmin = Boolean(isAdminData);
 
@@ -514,6 +528,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setCurrentUser,
     setCoupons
   );
+
+  useEffect(() => {
+    if (isAdmin) {
+      void adminActions.fetchContactMessages();
+      void adminActions.fetchBannedList();
+      void adminActions.fetchRecurrentEvaders();
+    }
+  }, [isAdmin, adminActions.fetchContactMessages, adminActions.fetchBannedList, adminActions.fetchRecurrentEvaders]);
 
   const submitPremiumRequest = async (
     plan: PlanDuration,

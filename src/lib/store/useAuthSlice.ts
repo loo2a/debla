@@ -10,6 +10,7 @@ import { compressImage } from "../imageUtils";
 import { preCheckUploadedImage } from "../photoModeration";
 import { Capacitor } from "@capacitor/core";
 import { App as CapApp } from "@capacitor/app";
+import { checkDeviceOrEmailBan, registerDeviceSession } from "../deviceSecurity";
 
 const fail = (err: any): ActionResult => ({
   ok: false,
@@ -25,6 +26,15 @@ export const useAuthSlice = (
 ) => {
   const requestEmailOtp = async (email: string): Promise<ActionResult> => {
     const cleanEmail = email.trim().toLowerCase();
+
+    // فحص الحظر على مستوى البريد أو معرّف الجهاز (Android ID)
+    const banCheck = await checkDeviceOrEmailBan(cleanEmail);
+    if (banCheck.isBanned) {
+      return {
+        ok: false,
+        error: banCheck.reason || "تم حظر هذا الحساب أو الجهاز من استخدام المنصة لمخالفة ميثاق الوقار."
+      };
+    }
 
     const lastRequest = Number(sessionStorage.getItem(`otp_request_${cleanEmail}`) || "0");
     const now = Date.now();
@@ -47,12 +57,25 @@ export const useAuthSlice = (
     const cleanEmail = email.trim().toLowerCase();
     const cleanCode = code.trim();
 
-    const { error } = await supabase.auth.verifyOtp({
+    // فحص الحظر قبل إكمال التحقق
+    const banCheck = await checkDeviceOrEmailBan(cleanEmail);
+    if (banCheck.isBanned) {
+      return {
+        ok: false,
+        error: banCheck.reason || "تم حظر هذا الحساب أو الجهاز من استخدام المنصة لمخالفة ميثاق الوقار."
+      };
+    }
+
+    const { data: authData, error } = await supabase.auth.verifyOtp({
       email: cleanEmail,
       token: cleanCode,
       type: "email",
     });
     if (error) return { ok: false, error: toAuthErrorMessage(error) };
+
+    if (authData?.user?.id) {
+      void registerDeviceSession(authData.user.id);
+    }
     return { ok: true };
   };
 

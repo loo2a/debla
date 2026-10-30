@@ -4,7 +4,7 @@ import {
   VerificationTierType, GuardianLinkStatus,
   CompatibilitySurvey, ProfileEditRequest,
   Coupon, AdminBroadcastMessage,
-  AcademyArticle
+  AcademyArticle, ContactMessage
 } from "../../types";
 
 export interface ActionResult {
@@ -15,6 +15,28 @@ export interface ActionResult {
 
 export type PlanDuration = "week" | "month" | "3months" | "6months" | "year";
 export type PaymentMethod = "google_play" | "credit_card" | "mobile_wallet";
+
+export interface BannedEntity {
+  id: string;
+  banType: "email" | "device";
+  identifier: string;
+  reason: string;
+  isActive: boolean;
+  createdAt: string;
+  originalUserId?: string;
+}
+
+export interface RecurrentEvader {
+  userId: string;
+  userName: string;
+  memberNumber?: string;
+  currentEmail?: string;
+  deviceId: string;
+  deviceModel?: string;
+  bannedEmail: string;
+  bannedAt: string;
+  reentryAt: string;
+}
 
 export interface AppContextType {
   currentUser: UserProfile | null;
@@ -130,4 +152,18 @@ export interface AppContextType {
   // Photo Moderation & Defense
   adminApprovePhoto: (userId: string) => Promise<ActionResult>;
   adminRejectPhoto: (userId: string, reason: string) => Promise<ActionResult>;
+
+  // Device Security & Ban Management
+  bannedList: BannedEntity[];
+  recurrentEvaders: RecurrentEvader[];
+  adminBanUser: (userId: string, banType: "email" | "device", reason?: string) => Promise<ActionResult>;
+  adminUnban: (banId: string) => Promise<ActionResult>;
+  fetchBannedList: () => Promise<void>;
+  fetchRecurrentEvaders: () => Promise<void>;
+
+  // Contact Messages & Support Tickets
+  contactMessages: ContactMessage[];
+  sendContactMessage: (subject: string, message: string, senderName?: string, senderEmail?: string) => Promise<ActionResult>;
+  adminUpdateContactMessageStatus: (messageId: string, status: "unread" | "read" | "replied" | "archived", notes?: string) => Promise<ActionResult>;
+  fetchContactMessages: () => Promise<void>;
 }

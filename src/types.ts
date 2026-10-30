@@ -326,3 +326,16 @@ export interface ArticleRead {
   rating?: number;
   createdAt: string;
 }
+
+export interface ContactMessage {
+  id: string;
+  userId?: string;
+  senderName?: string;
+  senderEmail?: string;
+  subject: string;
+  message: string;
+  status: "unread" | "read" | "replied" | "archived";
+  adminNotes?: string;
+  createdAt: string;
+  readAt?: string;
+}

@@ -1,30 +1,34 @@
 import React, { useState } from "react";
-import { Navigate } from "react-router-dom";
+import { Navigate, useSearchParams } from "react-router-dom";
 import { useApp } from "../lib/store";
 import { useUIStore } from "../stores/uiStore";
 import { Gender } from "../types";
 import { 
   Shield, Users, Sparkles, Check, X, AlertTriangle, 
   Trash2, Award, ShieldCheck, RefreshCw, CheckCircle2,
-  Lock, Tag, Bell, BarChart3, ChevronLeft, Camera
+  Lock, Tag, Bell, BarChart3, ChevronLeft, Camera, ShieldAlert,
+  ChevronDown, Layers, Menu, MessageSquare
 } from "lucide-react";
 import { AdminUsersManager } from "./admin/AdminUsersManager";
 import { AdminCouponsManager } from "./admin/AdminCouponsManager";
 import { AdminBroadcastManager } from "./admin/AdminBroadcastManager";
 import { AdminAnalyticsDashboard } from "./admin/AdminAnalyticsDashboard";
+import { AdminDeviceSecurityManager } from "./admin/AdminDeviceSecurityManager";
+import { AdminContactMessagesManager } from "./admin/AdminContactMessagesManager";
 
-type AdminTab = "analytics" | "users" | "photos" | "requests" | "coupons" | "broadcast" | "edit_requests" | "reports" | "stories";
+type AdminTab = "analytics" | "users" | "photos" | "requests" | "coupons" | "broadcast" | "edit_requests" | "reports" | "stories" | "device_security" | "contact_messages";
 
 export const AdminPanel: React.FC = () => {
   const { 
     isAdmin, profiles, premiumRequests, interactions, successStories, dbError, isSupabaseLoading,
     adminApprovePremium, adminRejectPremium, adminApproveStory, retryLoadData,
     profileEditRequests, adminReviewProfileEditRequest,
-    adminApprovePhoto, adminRejectPhoto, adminDeleteUser
+    adminApprovePhoto, adminRejectPhoto, adminDeleteUser, recurrentEvaders, contactMessages
   } = useApp();
-  const { addToast, showConfirm } = useUIStore();
+  const { addToast, showConfirm, setSidebarOpen } = useUIStore();
 
-  const [activeTab, setActiveTab] = useState<AdminTab>("analytics");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isRetrying, setIsRetrying] = useState(false);
   const [rejectNotes, setRejectNotes] = useState<Record<string, string>>({});
   const [targetedUserIdForBroadcast, setTargetedUserIdForBroadcast] = useState<string | null>(null);
@@ -34,6 +38,7 @@ export const AdminPanel: React.FC = () => {
     return <Navigate to="/" replace />;
   }
 
+  const unreadContactCount = (contactMessages || []).filter(m => m.status === "unread").length;
   const pendingRequests = premiumRequests.filter(r => r.status === "pending");
   const reports = interactions.filter(i => i.type === "report");
   const pendingStories = successStories.filter(s => !s.isApproved);
@@ -46,13 +51,10 @@ export const AdminPanel: React.FC = () => {
     setIsRetrying(false);
   };
 
-  const handleSelectUserForBroadcast = (userId: string) => {
-    setTargetedUserIdForBroadcast(userId);
-    setActiveTab("broadcast");
-  };
-
   const navItems = [
     { id: "analytics", label: "نظرة عامة وإحصائيات", icon: BarChart3, badge: null },
+    { id: "contact_messages", label: "رسائل وتذاكر الدعم", icon: MessageSquare, badge: unreadContactCount > 0 ? unreadContactCount : null, badgeColor: "bg-blue-600" },
+    { id: "device_security", label: "أمان الأجهزة والحظر", icon: ShieldAlert, badge: recurrentEvaders?.length > 0 ? recurrentEvaders.length : null, badgeColor: "bg-purple-600" },
     { id: "photos", label: "مراجعة واعتماد الصور", icon: Camera, badge: pendingPhotos.length, badgeColor: "bg-rose-500" },
     { id: "users", label: "التحكم في الحسابات", icon: Users, badge: profiles.filter(p => p.name).length },
     { id: "requests", label: "إدارة الاشتراكات", icon: Sparkles, badge: pendingRequests.length, badgeColor: "bg-amber-500" },
@@ -63,9 +65,22 @@ export const AdminPanel: React.FC = () => {
     { id: "stories", label: "قصص النجاح", icon: Award, badge: pendingStories.length },
   ];
 
+  const tabParam = searchParams.get("tab") as AdminTab | null;
+  const activeTab: AdminTab = tabParam && navItems.some(n => n.id === tabParam) ? tabParam : "analytics";
+
+  const setActiveTab = (tab: AdminTab) => {
+    setSearchParams({ tab });
+    setIsDropdownOpen(false);
+  };
+
+  const handleSelectUserForBroadcast = (userId: string) => {
+    setTargetedUserIdForBroadcast(userId);
+    setActiveTab("broadcast");
+  };
+
   return (
     <div className="pb-28 pt-4 font-sans text-right bg-slate-50 min-h-screen" dir="rtl">
-      <div className="max-w-2xl mx-auto px-4 space-y-5">
+      <div className="max-w-4xl mx-auto px-4 space-y-5">
         
         {/* Title Header */}
         <div className="text-center space-y-1">
@@ -120,32 +135,97 @@ export const AdminPanel: React.FC = () => {
           </div>
         )}
 
-        {/* Admin Navigation Pills Bar */}
-        <div className="bg-white rounded-2xl border border-slate-100 p-2 shadow-xs overflow-x-auto no-scrollbar">
-          <div className="flex items-center gap-1.5 min-w-max">
-            {navItems.map(item => {
-              const Icon = item.icon;
-              const isSelected = activeTab === item.id;
-              return (
+        {/* Admin Navigation Bar with Dropdown (بدلاً من الأشرطة الأفقية) */}
+        <div className="bg-white rounded-2xl border border-slate-200/80 p-3 shadow-xs">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            
+            {/* Current Active Tab Info */}
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-bold text-slate-400">القسم المفتوح:</span>
+              <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 px-3 py-1.5 rounded-xl">
+                {(() => {
+                  const currentItem = navItems.find(n => n.id === activeTab) || navItems[0];
+                  const ActiveIcon = currentItem.icon;
+                  return (
+                    <>
+                      <ActiveIcon className="w-4 h-4 text-emerald-600" />
+                      <span className="text-xs font-black text-slate-800">{currentItem.label}</span>
+                      {currentItem.badge !== null && currentItem.badge > 0 && (
+                        <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono text-white ${currentItem.badgeColor || "bg-emerald-600"}`}>
+                          {currentItem.badge}
+                        </span>
+                      )}
+                    </>
+                  );
+                })()}
+              </div>
+            </div>
+
+            {/* Dropdown Action & Sidebar Opener */}
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setSidebarOpen(true)}
+                className="p-2 text-slate-600 hover:text-slate-900 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl transition flex items-center gap-1.5 text-xs font-bold cursor-pointer"
+                title="فتح القائمة الجانبية الكاملة"
+              >
+                <Menu className="w-4 h-4 text-slate-500" />
+                <span className="hidden sm:inline">القائمة الجانبية</span>
+              </button>
+
+              <div className="relative flex-1 sm:flex-none">
                 <button
-                  key={item.id}
-                  onClick={() => setActiveTab(item.id as AdminTab)}
-                  className={`px-3 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
-                    isSelected
-                      ? "bg-emerald-600 text-white shadow-sm"
-                      : "text-slate-600 hover:bg-slate-50"
-                  }`}
+                  onClick={() => setIsDropdownOpen(prev => !prev)}
+                  className="w-full sm:w-auto bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold px-4 py-2.5 rounded-xl transition flex items-center justify-between sm:justify-start gap-2 shadow-xs cursor-pointer"
                 >
-                  <Icon className="w-3.5 h-3.5" />
-                  <span>{item.label}</span>
-                  {item.badge !== null && item.badge > 0 && (
-                    <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono text-white ${item.badgeColor || (isSelected ? "bg-white/30" : "bg-emerald-600")}`}>
-                      {item.badge}
-                    </span>
-                  )}
+                  <div className="flex items-center gap-2">
+                    <Layers className="w-4 h-4 text-emerald-400" />
+                    <span>لوحة التحكم (تبديل القسم)</span>
+                  </div>
+                  <ChevronDown className={`w-4 h-4 text-slate-300 transition-transform duration-200 ${isDropdownOpen ? "rotate-180" : ""}`} />
                 </button>
-              );
-            })}
+
+                {isDropdownOpen && (
+                  <>
+                    <div 
+                      className="fixed inset-0 z-30" 
+                      onClick={() => setIsDropdownOpen(false)} 
+                    />
+                    <div className="absolute left-0 mt-2 w-72 bg-white rounded-2xl border border-slate-200 shadow-xl z-40 p-2 space-y-1 max-h-96 overflow-y-auto">
+                      <div className="px-3 py-1.5 text-[10px] font-bold text-slate-400 border-b border-slate-100 flex items-center justify-between">
+                        <span>أقسام لوحة التحكم:</span>
+                        <span className="text-[9px] text-slate-400">{navItems.length} أقسام</span>
+                      </div>
+                      {navItems.map(item => {
+                        const Icon = item.icon;
+                        const isSelected = activeTab === item.id;
+                        return (
+                          <button
+                            key={item.id}
+                            onClick={() => setActiveTab(item.id as AdminTab)}
+                            className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-bold transition cursor-pointer ${
+                              isSelected
+                                ? "bg-emerald-600 text-white shadow-xs"
+                                : "text-slate-700 hover:bg-slate-50"
+                            }`}
+                          >
+                            <div className="flex items-center gap-2.5">
+                              <Icon className={`w-4 h-4 ${isSelected ? "text-white" : "text-slate-400"}`} />
+                              <span>{item.label}</span>
+                            </div>
+                            {item.badge !== null && item.badge > 0 && (
+                              <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono text-white ${item.badgeColor || (isSelected ? "bg-white/30" : "bg-emerald-600")}`}>
+                                {item.badge}
+                              </span>
+                            )}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
+
           </div>
         </div>
 
@@ -603,6 +683,20 @@ export const AdminPanel: React.FC = () => {
               </div>
             )}
           </div>
+        )}
+
+        {/* ======================================================== */}
+        {/* Tab: Device Security & Tiered Ban Management */}
+        {/* ======================================================== */}
+        {activeTab === "device_security" && (
+          <AdminDeviceSecurityManager />
+        )}
+
+        {/* ======================================================== */}
+        {/* Tab: Contact & Support Messages */}
+        {/* ======================================================== */}
+        {activeTab === "contact_messages" && (
+          <AdminContactMessagesManager />
         )}
 
       </div>

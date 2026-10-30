@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useApp } from "../lib/store";
 import { useUIStore } from "../stores/uiStore";
@@ -7,7 +7,7 @@ import { motion, AnimatePresence } from "motion/react";
 import { 
   Home, Bell, User, Heart, EyeOff, Users, Award, 
   Sparkles, Mail, Share2, LogOut, X, ShieldAlert, ShieldCheck,
-  GraduationCap
+  GraduationCap, ChevronDown, BarChart3, Camera, Tag, Lock, AlertTriangle, MessageSquare
 } from "lucide-react";
 
 interface SidebarProps {
@@ -23,12 +23,57 @@ export const Sidebar: React.FC<SidebarProps> = ({
   activeScreen: propActiveScreen, 
   setActiveScreen: propSetActiveScreen 
 }) => {
-  const { currentUser, logout, notifications, isAdmin } = useApp();
+  const { 
+    currentUser, logout, notifications, isAdmin,
+    profiles, premiumRequests, interactions, successStories,
+    profileEditRequests, recurrentEvaders, contactMessages
+  } = useApp();
   const { addToast, showConfirm } = useUIStore();
   const location = useLocation();
   const navigate = useNavigate();
 
+  const [isAdminDropdownOpen, setIsAdminDropdownOpen] = useState(
+    location.pathname.startsWith("/admin")
+  );
+
+  useEffect(() => {
+    if (location.pathname.startsWith("/admin")) {
+      setIsAdminDropdownOpen(true);
+    }
+  }, [location.pathname]);
+
   if (!currentUser) return null;
+
+  const unreadContactCount = (contactMessages || []).filter(m => m.status === "unread").length;
+  const pendingPhotos = (profiles || []).filter(p => p.photoModerationStatus === "pending_approval" || p.photoModerationStatus === "frozen_by_reports").length;
+  const pendingRequests = (premiumRequests || []).filter(r => r.status === "pending").length;
+  const pendingEditRequests = (profileEditRequests || []).filter(r => r.status === "pending").length;
+  const pendingStories = (successStories || []).filter(s => !s.isApproved).length;
+  const reportsCount = (interactions || []).filter(i => i.type === "report").length;
+  const evadersCount = recurrentEvaders?.length || 0;
+  const totalAdminAlerts = pendingPhotos + pendingRequests + pendingEditRequests + pendingStories + evadersCount + unreadContactCount;
+
+  const adminNavItems = [
+    { id: "analytics", label: "نظرة عامة وإحصائيات", icon: BarChart3, badge: null },
+    { id: "contact_messages", label: "رسائل وتذاكر الدعم", icon: MessageSquare, badge: unreadContactCount > 0 ? unreadContactCount : null, badgeColor: "bg-blue-600" },
+    { id: "device_security", label: "أمان الأجهزة والحظر", icon: ShieldAlert, badge: evadersCount > 0 ? evadersCount : null, badgeColor: "bg-purple-600" },
+    { id: "photos", label: "مراجعة واعتماد الصور", icon: Camera, badge: pendingPhotos > 0 ? pendingPhotos : null, badgeColor: "bg-rose-500" },
+    { id: "users", label: "التحكم في الحسابات", icon: Users, badge: null },
+    { id: "requests", label: "إدارة الاشتراكات", icon: Sparkles, badge: pendingRequests > 0 ? pendingRequests : null, badgeColor: "bg-amber-500" },
+    { id: "coupons", label: "الخصومات والكوبونات", icon: Tag, badge: null },
+    { id: "broadcast", label: "إرسال الإشعارات", icon: Bell, badge: null },
+    { id: "edit_requests", label: "طلبات التعديل", icon: Lock, badge: pendingEditRequests > 0 ? pendingEditRequests : null, badgeColor: "bg-rose-500" },
+    { id: "reports", label: "البلاغات", icon: AlertTriangle, badge: reportsCount > 0 ? reportsCount : null, badgeColor: "bg-amber-600" },
+    { id: "stories", label: "قصص النجاح", icon: Award, badge: pendingStories > 0 ? pendingStories : null, badgeColor: "bg-emerald-600" },
+  ];
+
+  const handleAdminSubItemClick = (tabId: string) => {
+    if (propSetActiveScreen) {
+      propSetActiveScreen("admin");
+    }
+    navigate(`/admin?tab=${tabId}`);
+    onClose();
+  };
 
   const handleItemClick = (path: string, legacyScreenId: string) => {
     if (propSetActiveScreen) {
@@ -156,19 +201,71 @@ export const Sidebar: React.FC<SidebarProps> = ({
             {/* Navigation links */}
             <div className="flex-1 overflow-y-auto p-4 space-y-1">
               
-              {/* Admin role is decided by the server (user_roles table), never by the email */}
+              {/* Dropdown لوحة التحكم الخاصة بالإدارة */}
               {isAdmin && (
-                <button
-                  onClick={() => handleItemClick("/admin", "admin")}
-                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold transition duration-200 ${
-                    location.pathname === "/admin" || propActiveScreen === "admin"
-                      ? "bg-rose-50 text-rose-700 border-r-4 border-rose-600" 
-                      : "text-rose-600 hover:bg-rose-50/50"
-                  }`}
-                >
-                  <ShieldAlert className="w-5 h-5 text-rose-600" />
-                  <span>لوحة تحكم المدير</span>
-                </button>
+                <div className="mb-2 bg-slate-50/90 rounded-2xl border border-slate-200/80 overflow-hidden">
+                  <button
+                    onClick={() => setIsAdminDropdownOpen(prev => !prev)}
+                    className={`w-full flex items-center justify-between px-3.5 py-3 text-sm font-bold transition duration-200 cursor-pointer ${
+                      location.pathname.startsWith("/admin")
+                        ? "bg-rose-50 text-rose-800 border-r-4 border-rose-600"
+                        : "text-slate-800 hover:bg-slate-100"
+                    }`}
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <ShieldAlert className="w-5 h-5 text-rose-600 flex-shrink-0" />
+                      <span>لوحة التحكم</span>
+                      {totalAdminAlerts > 0 && (
+                        <span className="bg-rose-600 text-white text-[10px] font-bold px-1.5 py-0.2 rounded-full font-mono">
+                          {totalAdminAlerts}
+                        </span>
+                      )}
+                    </div>
+                    <ChevronDown className={`w-4 h-4 text-slate-500 transition-transform duration-200 ${isAdminDropdownOpen ? "rotate-180" : ""}`} />
+                  </button>
+
+                  <AnimatePresence initial={false}>
+                    {isAdminDropdownOpen && (
+                      <motion.div
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: "auto" }}
+                        exit={{ opacity: 0, height: 0 }}
+                        transition={{ duration: 0.2 }}
+                        className="overflow-hidden px-2 pb-2 pt-1 space-y-1"
+                      >
+                        {adminNavItems.map(item => {
+                          const Icon = item.icon;
+                          const searchParams = new URLSearchParams(location.search);
+                          const currentTab = searchParams.get("tab") || "analytics";
+                          const isTabActive = location.pathname.startsWith("/admin") && currentTab === item.id;
+                          return (
+                            <button
+                              key={item.id}
+                              onClick={() => handleAdminSubItemClick(item.id)}
+                              className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-bold transition duration-150 cursor-pointer ${
+                                isTabActive
+                                  ? "bg-rose-600 text-white shadow-xs"
+                                  : "text-slate-600 hover:bg-white hover:text-slate-900"
+                              }`}
+                            >
+                              <div className="flex items-center gap-2.5 truncate">
+                                <Icon className={`w-4 h-4 flex-shrink-0 ${isTabActive ? "text-white" : "text-slate-400"}`} />
+                                <span className="truncate">{item.label}</span>
+                              </div>
+                              {item.badge !== null && item.badge > 0 && (
+                                <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono font-bold ${
+                                  isTabActive ? "bg-white/30 text-white" : (item.badgeColor || "bg-rose-600") + " text-white"
+                                }`}>
+                                  {item.badge}
+                                </span>
+                              )}
+                            </button>
+                          );
+                        })}
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
               )}
 
               {menuItems.map(item => {
