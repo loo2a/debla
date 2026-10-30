@@ -1,5 +1,13 @@
-import { Device } from "@capacitor/device";
+import { registerPlugin } from "@capacitor/core";
 import { supabase } from "./supabase";
+
+interface DevicePlugin {
+  getId(): Promise<{ identifier?: string }>;
+  getInfo(): Promise<{ model?: string; platform?: string; osVersion?: string }>;
+}
+
+// استخدام registerPlugin من @capacitor/core مباشرة لضمان العمل على الويب وأندرويد دون الاعتماد على استيراد الحزم الفرعية
+const Device = registerPlugin<DevicePlugin>("Device");
 
 const LOCAL_STORAGE_DEVICE_KEY = "debla_secure_device_id";
 
