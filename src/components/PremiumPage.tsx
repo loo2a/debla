@@ -121,9 +121,9 @@ export const PremiumPage: React.FC = () => {
           <div className="inline-flex p-3 bg-amber-50 text-amber-500 rounded-full">
             <Sparkles className="w-8 h-8 fill-amber-300" />
           </div>
-          <h2 className="text-2xl font-extrabold text-slate-800">باقة التميز - مودة ورحمة</h2>
+          <h2 className="text-2xl font-extrabold text-slate-800">باقة التميز - دبلة</h2>
           <p className="text-xs text-slate-500 max-w-sm mx-auto leading-relaxed">
-            استفد من المميزات الكاملة لخدمة مودة ورحمة لبناء بيتك الجديد بكل سهولة وجدية ووفق الضوابط الشرعية.
+            استفد من المميزات الكاملة لتطبيق دبلة لبناء بيتك الجديد بكل سهولة وجدية ووفق الضوابط الشرعية.
           </p>
         </div>
 
@@ -347,10 +347,10 @@ export const PremiumPage: React.FC = () => {
             <p className="text-slate-400 text-xs">فريق الدعم الفني متواجد لمساعدتكم والإجابة عن أي استفسار بشأن الاشتراكات والخدمات.</p>
           </div>
           <a 
-            href="mailto:support@mawada-rahma.com"
+            href="mailto:support@debla.app"
             className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs px-4 py-2.5 rounded-xl transition inline-flex items-center gap-1.5 self-stretch sm:self-auto text-center justify-center font-mono"
           >
-            support@mawada-rahma.com
+            support@debla.app
           </a>
         </div>
 

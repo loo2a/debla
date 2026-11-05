@@ -93,7 +93,7 @@ export class NativeBridge {
       try {
         await PushNotifications.createChannel({
           id: "default",
-          name: "إشعارات دبلة ومودة",
+          name: "إشعارات تطبيق دبلة",
           description: "تنبيهات الرسائل الجديدة والاهتمامات المتبادلة",
           importance: 5,
           visibility: 1,

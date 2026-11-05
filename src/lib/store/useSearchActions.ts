@@ -30,21 +30,13 @@ export const useSearchActions = (
         p_has_beard: filter.hasBeard,
         p_red_flags: filter.redFlags && filter.redFlags.length > 0 ? filter.redFlags : null,
         p_sort_by: filter.sortBy || "latest",
+        p_search_query: filter.searchQuery?.trim() || null,
         p_page: filter.page || 1,
         p_page_size: filter.pageSize || 12,
       });
 
       if (!error && data && data.results) {
         let mappedResults = data.results.map((r: any) => toProfile(r));
-        if (filter.searchQuery && filter.searchQuery.trim()) {
-          const q = filter.searchQuery.trim().toLowerCase();
-          mappedResults = mappedResults.filter((p: UserProfile) =>
-            (p.name && p.name.toLowerCase().includes(q)) ||
-            (p.aboutMe && p.aboutMe.toLowerCase().includes(q)) ||
-            (p.profession && p.profession.toLowerCase().includes(q)) ||
-            (p.memberNumber && p.memberNumber.toLowerCase().includes(q))
-          );
-        }
         return {
           results: mappedResults,
           total: data.total || 0,

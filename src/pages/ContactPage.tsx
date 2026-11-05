@@ -139,7 +139,7 @@ export const ContactPage: React.FC = () => {
       <div className="bg-slate-100 p-4 rounded-2xl border border-slate-200/55 space-y-3">
         <h4 className="text-xs font-bold text-slate-800">قنوات التواصل والمساعدة المباشرة:</h4>
         <div className="text-[11px] text-slate-600 space-y-1">
-          <p className="flex items-center gap-1.5 font-mono"><Mail className="w-3.5 h-3.5 text-slate-400" /> support@mawada-rahma.com</p>
+          <p className="flex items-center gap-1.5 font-mono"><Mail className="w-3.5 h-3.5 text-slate-400" /> support@debla.app</p>
           <p className="flex items-center gap-1.5 font-mono"><Phone className="w-3.5 h-3.5 text-slate-400" /> خدمة العملاء والدعم الفني</p>
         </div>
         <a

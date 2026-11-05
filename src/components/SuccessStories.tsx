@@ -97,7 +97,7 @@ export const SuccessStories: React.FC = () => {
           {!submitted ? (
             <form onSubmit={handleAddStory} className="space-y-4">
               <p className="text-xs text-slate-500 leading-relaxed">
-                هل منّ الله عليك بلقاء شريك حياتك عبر مودة ورحمة؟ شارك قصتك الطيبة لتكون قدوة مباركة وبثاً للأمل والجدية في قلوب إخوانك وأخواتك الباحثين.
+                هل منّ الله عليك بلقاء شريك حياتك عبر تطبيق دبلة؟ شارك قصتك الطيبة لتكون قدوة مباركة وبثاً للأمل والجدية في قلوب إخوانك وأخواتك الباحثين.
               </p>
 
               <div className="grid grid-cols-2 gap-3">

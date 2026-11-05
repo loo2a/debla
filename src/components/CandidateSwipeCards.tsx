@@ -24,14 +24,15 @@ export const CandidateSwipeCards: React.FC<CandidateSwipeCardsProps> = ({ onOpen
 
   // اليوم الحالي لتحديد الحد اليومي (5 للمجاني، 20 للمميز)
   const todayKey = useMemo(() => {
-    return currentUser ? `mawada_swipes_${currentUser.id}_${new Date().toISOString().slice(0, 10)}` : "";
+    return currentUser ? `debla_swipes_${currentUser.id}_${new Date().toISOString().slice(0, 10)}` : "";
   }, [currentUser?.id]);
 
-  // استرجاع السجلات المسحوبة اليوم من التخزين المحلي
+  // استرجاع السجلات المسحوبة اليوم من التخزين المحلي (مع دعم المفاتيح السابقة)
   const [swipedTodayIds, setSwipedTodayIds] = useState<string[]>(() => {
     if (!todayKey) return [];
     try {
-      const saved = localStorage.getItem(todayKey);
+      const legacyKey = currentUser ? `mawada_swipes_${currentUser.id}_${new Date().toISOString().slice(0, 10)}` : "";
+      const saved = localStorage.getItem(todayKey) || (legacyKey ? localStorage.getItem(legacyKey) : null);
       return saved ? JSON.parse(saved) : [];
     } catch {
       return [];

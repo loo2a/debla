@@ -349,7 +349,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
         <div className="bg-white rounded-2xl border border-slate-100 p-5 shadow-sm space-y-4">
           <div className="flex items-center gap-2 border-r-4 border-emerald-600 pr-2">
             <Award className="w-5 h-5 text-emerald-600" />
-            <h3 className="font-bold text-slate-800 text-sm">قصص نجاح من مودة ورحمة</h3>
+            <h3 className="font-bold text-slate-800 text-sm">قصص نجاح من تطبيق دبلة</h3>
           </div>
 
           <div className="space-y-4">

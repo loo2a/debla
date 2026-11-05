@@ -2,8 +2,8 @@
  * دالة مساعدة مركزية لمشاركة التطبيق عبر مختلف المنصات (WhatsApp / Telegram / Native Share)
  */
 export async function shareMawadaApp(): Promise<{ success: boolean; method: "native" | "clipboard" | "fallback" }> {
-  const title = "تطبيق مودة ورحمة للزواج الإسلامي الشرعي";
-  const text = "منصة إسلامية موثوقة للتعارف الجاد بغرض الزواج الشرعي العلني بضوابط الشريعة وميثاق الشرف وحماية تامة للخصوصية.";
+  const title = "تطبيق دبلة للزواج الإسلامي الشرعي";
+  const text = "منصة موثوقة للتعارف الجاد بغرض الزواج الشرعي العلني بضوابط الشريعة وميثاق الشرف وحماية تامة للخصوصية.";
   const url = window.location.origin;
 
   if (typeof navigator !== "undefined" && navigator.share) {

@@ -18,7 +18,7 @@ export const PrivacyPolicyPage: React.FC = () => {
             </div>
             <div>
               <h1 className="text-xl font-extrabold text-slate-900">سياسة الخصوصية وحماية البيانات</h1>
-              <p className="text-xs text-slate-500 font-medium">منصة وتطبيق مودة ورحمة للزواج الشرعي</p>
+              <p className="text-xs text-slate-500 font-medium">منصة وتطبيق دبلة للزواج الشرعي</p>
             </div>
           </div>
           <Button 
@@ -35,7 +35,7 @@ export const PrivacyPolicyPage: React.FC = () => {
         {/* Intro */}
         <div className="bg-emerald-50/70 border border-emerald-100 rounded-2xl p-4 text-xs text-emerald-950 leading-relaxed space-y-2">
           <p>
-            نولي في منصة <strong>مودة ورحمة</strong> أعلى درجات الحرص والأمانة على خصوصية مستخدمينا، انطلاقاً من أحكام الشريعة الإسلامية، والامتثال التام لـ <strong>قانون حماية البيانات الشخصية المصري رقم 151 لسنة 2020</strong>، ولائحة <strong>Google Play Data Safety</strong>.
+            نولي في منصة <strong>دبلة</strong> أعلى درجات الحرص والأمانة على خصوصية مستخدمينا، انطلاقاً من أحكام الشريعة الإسلامية، والامتثال التام لـ <strong>قانون حماية البيانات الشخصية المصري رقم 151 لسنة 2020</strong>، ولائحة <strong>Google Play Data Safety</strong>.
           </p>
           <p className="font-semibold text-emerald-900">
             تعهّد رسمي: لا نقوم ببيع أو تأجير أو مشاركة أي بيانات شخصية أو حساسة لأي طرف ثالث أو شبكات إعلانية على الإطلاق.
@@ -125,7 +125,7 @@ export const PrivacyPolicyPage: React.FC = () => {
           <p className="text-xs text-slate-600 leading-relaxed">
             لأي استفسار أو لطلب تصدير بياناتك أو تقديم شكوى تتعلق بالخصوصية:
             <br />
-            البريد الرسمي: <strong className="text-emerald-700 font-mono">support@mawada-rahma.com</strong>
+            البريد الرسمي: <strong className="text-emerald-700 font-mono">support@debla.app</strong>
           </p>
         </section>
 

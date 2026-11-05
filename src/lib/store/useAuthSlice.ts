@@ -339,15 +339,12 @@ export const useAuthSlice = (
         return fail(new Error("تعذر رفع الصورة إلى التخزين السحابي، يرجى التحقق من اتصالك والمحاولة لاحقاً."));
       }
 
-      const { data: signedData, error: signError } = await supabase.storage
+      // الحصول على رابط العرض الدائم للصورة بدون انتهاء صلاحية
+      const { data: urlData } = supabase.storage
         .from("profile-photos")
-        .createSignedUrl(filePath, 60 * 60 * 24 * 7);
+        .getPublicUrl(filePath);
 
-      if (signError || !signedData?.signedUrl) {
-        return fail(new Error("تعذر إنشاء رابط العرض المحمي للصورة."));
-      }
-
-      const finalUrl = signedData.signedUrl;
+      const finalUrl = urlData?.publicUrl || filePath;
 
       const saveRes = await saveProfile({
         profileImage: finalUrl,

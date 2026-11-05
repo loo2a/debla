@@ -15,11 +15,11 @@ export interface GooglePlayProduct {
 }
 
 export const GOOGLE_PLAY_SUBSCRIPTIONS: GooglePlayProduct[] = [
-  { id: "week", sku: "debla_sub_week", planDuration: "week", title: "اشتراك أسبوعي - مودة ورحمة", price: "49 ج.م" },
-  { id: "month", sku: "debla_sub_month", planDuration: "month", title: "اشتراك شهري - مودة ورحمة", price: "149 ج.م" },
-  { id: "3months", sku: "debla_sub_3months", planDuration: "3months", title: "اشتراك 3 أشهر - مودة ورحمة", price: "299 ج.م" },
-  { id: "6months", sku: "debla_sub_6months", planDuration: "6months", title: "اشتراك 6 أشهر - مودة ورحمة", price: "499 ج.م" },
-  { id: "year", sku: "debla_sub_year", planDuration: "year", title: "اشتراك سنوي - مودة ورحمة", price: "799 ج.م" },
+  { id: "week", sku: "debla_sub_week", planDuration: "week", title: "اشتراك أسبوعي - دبلة", price: "49 ج.م" },
+  { id: "month", sku: "debla_sub_month", planDuration: "month", title: "اشتراك شهري - دبلة", price: "149 ج.م" },
+  { id: "3months", sku: "debla_sub_3months", planDuration: "3months", title: "اشتراك 3 أشهر - دبلة", price: "299 ج.م" },
+  { id: "6months", sku: "debla_sub_6months", planDuration: "6months", title: "اشتراك 6 أشهر - دبلة", price: "499 ج.م" },
+  { id: "year", sku: "debla_sub_year", planDuration: "year", title: "اشتراك سنوي - دبلة", price: "799 ج.م" },
 ];
 
 export interface PurchaseResult {

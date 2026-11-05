@@ -209,9 +209,10 @@ export function getPairKey(userId1: string, userId2: string): string {
  */
 export function getJourneyState(myId: string, partnerId: string): MarriageJourneyState {
   const pairKey = getPairKey(myId, partnerId);
-  const storageKey = `mawada_journey_${pairKey}`;
+  const storageKey = `debla_journey_${pairKey}`;
+  const legacyKey = `mawada_journey_${pairKey}`;
   try {
-    const raw = localStorage.getItem(storageKey);
+    const raw = localStorage.getItem(storageKey) || localStorage.getItem(legacyKey);
     if (raw) {
       return JSON.parse(raw);
     }
@@ -230,7 +231,7 @@ export function getJourneyState(myId: string, partnerId: string): MarriageJourne
  * حفظ وتحديث حالة الرحلة
  */
 export function saveJourneyState(state: MarriageJourneyState): void {
-  const storageKey = `mawada_journey_${state.pairKey}`;
+  const storageKey = `debla_journey_${state.pairKey}`;
   try {
     localStorage.setItem(storageKey, JSON.stringify(state));
   } catch {}

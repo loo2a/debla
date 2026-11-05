@@ -65,21 +65,78 @@ export const useInteractionActions = (
   };
 
   const expressInterest = async (toUserId: string): Promise<ActionResult> => {
+    if (!currentUser) return { ok: false, error: "يجب تسجيل الدخول أولاً." };
+
     const { error } = await supabase.rpc("express_interest_rpc", { p_target_id: toUserId });
     if (error) {
       return fail(error);
     }
-    return insertInteraction(toUserId, "interest");
+
+    const newInteraction: Interaction = {
+      id: `int-${Date.now()}`,
+      fromUserId: currentUser.id,
+      toUserId,
+      type: "interest",
+      timestamp: new Date().toISOString(),
+    };
+
+    setInteractions(prev => {
+      if (prev.some(i => i.fromUserId === currentUser.id && i.toUserId === toUserId && i.type === "interest")) {
+        return prev;
+      }
+      return [...prev, newInteraction];
+    });
+
+    void Promise.resolve(
+      supabase.functions.invoke("send-push", {
+        body: {
+          userId: toUserId,
+          title: "اهتمام جديد بملفك الشخصي",
+          body: `أبدى عضو اهتماماً جاداً بملفك الشخصي في تطبيق دبلة.`,
+          data: { chatUserId: currentUser.id, type: "interest", url: `/profile/${currentUser.id}` },
+        },
+      })
+    ).catch(() => {});
+
+    return { ok: true };
   };
 
   const acceptInterest = async (toUserId: string): Promise<ActionResult> => {
+    if (!currentUser) return { ok: false, error: "يجب تسجيل الدخول أولاً." };
+
     const { error } = await supabase.rpc("accept_interest_rpc", { p_target_id: toUserId });
     if (error) {
       return fail(error);
     }
-    const res = await insertInteraction(toUserId, "accept_interest");
-    if (currentUser) await loadAll(currentUser.id, true);
-    return res;
+
+    const newInteraction: Interaction = {
+      id: `int-${Date.now()}`,
+      fromUserId: currentUser.id,
+      toUserId,
+      type: "accept_interest",
+      timestamp: new Date().toISOString(),
+    };
+
+    setInteractions(prev => {
+      if (prev.some(i => i.fromUserId === currentUser.id && i.toUserId === toUserId && i.type === "accept_interest")) {
+        return prev;
+      }
+      return [...prev, newInteraction];
+    });
+
+    void Promise.resolve(
+      supabase.functions.invoke("send-push", {
+        body: {
+          userId: toUserId,
+          title: "تم قبول اهتمامك",
+          body: `تم قبول اهتمامك المتبادل! يمكنك الآن بدء التواصل الشرعي.`,
+          data: { chatUserId: currentUser.id, type: "accept_interest", url: `/inbox/${currentUser.id}` },
+        },
+      })
+    ).catch(() => {});
+
+    await loadAll(currentUser.id, true);
+    return { ok: true };
   };
 
   const ignoreProfile = (toUserId: string) => insertInteraction(toUserId, "ignore");

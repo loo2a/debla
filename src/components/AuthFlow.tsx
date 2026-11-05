@@ -152,7 +152,7 @@ export const AuthFlow: React.FC = () => {
           addToast(`تم إنشاء حسابك، ولكن تعذر ربط رمز الدعوة: ${linkRes.error}`, "info");
         }
       } else {
-        addToast("مبارك! تم إعداد حسابك بنجاح، مرحباً بك في مودة ورحمة.", "success");
+        addToast("مبارك! تم إعداد حسابك بنجاح، مرحباً بك في تطبيق دبلة.", "success");
       }
     }
 

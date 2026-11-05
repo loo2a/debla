@@ -30,6 +30,11 @@ interface UIStoreState {
   isSidebarOpen: boolean;
   setSidebarOpen: (isOpen: boolean) => void;
   toggleSidebar: () => void;
+
+  isReviewModalOpen: boolean;
+  openReviewModal: () => void;
+  closeReviewModal: () => void;
+  triggerReviewPrompt: () => void;
 }
 
 export const useUIStore = create<UIStoreState>((set) => ({
@@ -52,4 +57,15 @@ export const useUIStore = create<UIStoreState>((set) => ({
   isSidebarOpen: false,
   setSidebarOpen: (isOpen) => set({ isSidebarOpen: isOpen }),
   toggleSidebar: () => set((state) => ({ isSidebarOpen: !state.isSidebarOpen })),
+
+  isReviewModalOpen: false,
+  openReviewModal: () => set({ isReviewModalOpen: true }),
+  closeReviewModal: () => set({ isReviewModalOpen: false }),
+  triggerReviewPrompt: () => {
+    if (typeof localStorage === "undefined") return;
+    const reviewed = localStorage.getItem("debla_app_reviewed") || localStorage.getItem("mawada_app_reviewed");
+    const postponedUntil = Number(localStorage.getItem("debla_review_postponed_until") || localStorage.getItem("mawada_review_postponed_until") || "0");
+    if (reviewed === "true" || Date.now() < postponedUntil) return;
+    set({ isReviewModalOpen: true });
+  },
 }));

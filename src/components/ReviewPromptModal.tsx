@@ -13,6 +13,7 @@ export const ReviewPromptModal: React.FC<ReviewPromptModalProps> = ({ isOpen, on
   if (!isOpen) return null;
 
   const handleRateNow = () => {
+    localStorage.setItem("debla_app_reviewed", "true");
     localStorage.setItem("mawada_app_reviewed", "true");
     onClose();
     // Open Google Play store listing
@@ -21,7 +22,9 @@ export const ReviewPromptModal: React.FC<ReviewPromptModalProps> = ({ isOpen, on
 
   const handleLater = () => {
     // Postpone for 7 days
-    localStorage.setItem("mawada_review_postponed_until", String(Date.now() + 7 * 24 * 60 * 60 * 1000));
+    const postponed = String(Date.now() + 7 * 24 * 60 * 60 * 1000);
+    localStorage.setItem("debla_review_postponed_until", postponed);
+    localStorage.setItem("mawada_review_postponed_until", postponed);
     onClose();
   };
 
@@ -43,7 +46,7 @@ export const ReviewPromptModal: React.FC<ReviewPromptModalProps> = ({ isOpen, on
 
         <div className="space-y-1.5">
           <h3 className="text-base font-extrabold text-slate-800">
-            ما رأيك في تجربة مودة ورحمة؟
+            ما رأيك في تجربة تطبيق دبلة؟
           </h3>
           <p className="text-xs text-slate-500 leading-relaxed">
             تقييمك الطيب بـ 5 نجوم على Google Play يساهم في دعم المنصة ونشر الخير وتيسير العفاف بين الشباب والفتيات.

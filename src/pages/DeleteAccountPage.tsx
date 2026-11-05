@@ -250,7 +250,7 @@ export const DeleteAccountPage: React.FC = () => {
             )}
 
             <div className="pt-2 text-center text-xs text-slate-400">
-              يمكنك أيضاً مراسلة الإدارة مباشرة عبر: <span className="font-mono text-emerald-700">support@mawada-rahma.com</span>
+              يمكنك أيضاً مراسلة الإدارة مباشرة عبر: <span className="font-mono text-emerald-700">support@debla.app</span>
             </div>
           </>
         )}

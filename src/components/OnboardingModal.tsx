@@ -11,14 +11,14 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ onComplete }) 
   const [currentStep, setCurrentStep] = useState(0);
 
   useEffect(() => {
-    const hasSeen = localStorage.getItem("mawada_onboarding_completed");
+    const hasSeen = localStorage.getItem("debla_onboarding_completed") || localStorage.getItem("mawada_onboarding_completed");
     if (!hasSeen) {
       setIsOpen(true);
     }
   }, []);
 
   const handleFinish = () => {
-    localStorage.setItem("mawada_onboarding_completed", "true");
+    localStorage.setItem("debla_onboarding_completed", "true");
     setIsOpen(false);
     if (onComplete) onComplete();
   };
@@ -30,7 +30,7 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ onComplete }) 
       icon: <ShieldCheck className="w-12 h-12 text-emerald-600" />,
       badge: "الجدية والأمانة التامة",
       title: "بيئة محترمة بميثاق شرف ملزم",
-      desc: "تطبيق مودة ورحمة مخصص حصرياً للتعارف الجاد بغرض الزواج وبناء أسرة مستقرة، ولا نسمح بأي تعارف عابث أو مخالف للمعايير الأخلاقية.",
+      desc: "تطبيق دبلة مخصص حصرياً للتعارف الجاد بغرض الزواج وبناء أسرة مستقرة، ولا نسمح بأي تعارف عابث أو مخالف للمعايير الأخلاقية.",
       bg: "bg-emerald-50",
     },
     {

@@ -51,7 +51,7 @@ export const AppHeader: React.FC = () => {
   const getPageInfo = () => {
     if (isHome) {
       return {
-        title: "مودة ورحمة",
+        title: "دبلة",
         subtitle: "نظام إسلامي جاد",
         isBrand: true,
       };
@@ -98,7 +98,7 @@ export const AppHeader: React.FC = () => {
     if (pathname.startsWith("/delete-account")) {
       return { title: "حذف الحساب نهائياً", icon: ShieldAlert, iconColor: "text-rose-600" };
     }
-    return { title: "مودة ورحمة", isBrand: true };
+    return { title: "دبلة", isBrand: true };
   };
 
   const pageInfo = getPageInfo();
@@ -107,7 +107,7 @@ export const AppHeader: React.FC = () => {
   const handleShare = async () => {
     const res = await shareMawadaApp();
     if (res.success && res.method === "clipboard") {
-      addToast("تم نسخ رابط تطبيق مودة ورحمة بنجاح! شاركه مع الأهل والأصدقاء.", "success");
+      addToast("تم نسخ رابط تطبيق دبلة بنجاح! شاركه مع الأهل والأصدقاء.", "success");
     }
   };
 
@@ -148,13 +148,13 @@ export const AppHeader: React.FC = () => {
             <div className="flex items-center gap-2">
               <img
                 src="/icon-192.png"
-                alt="مودة ورحمة"
+                alt="دبلة"
                 className="w-7 h-7 rounded-lg object-cover shadow-sm"
                 onError={(e) => {
                   (e.currentTarget as HTMLImageElement).src = "/icon.svg";
                 }}
               />
-              <span className="font-black text-sm text-slate-900 tracking-tight">مودة ورحمة</span>
+              <span className="font-black text-sm text-slate-900 tracking-tight">دبلة</span>
               <div className="flex items-center gap-1 bg-emerald-50 text-emerald-800 px-2 py-0.5 rounded-full text-[10px] font-bold border border-emerald-200">
                 <Shield className="w-3 h-3 text-emerald-600" />
                 <span>زواج شرعي</span>

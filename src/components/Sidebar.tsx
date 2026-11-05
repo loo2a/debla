@@ -114,8 +114,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const handleShare = () => {
     if (navigator.share) {
       navigator.share({
-        title: 'تطبيق الزواج الإسلامي - مودة ورحمة',
-        text: 'انضم إلينا في تطبيق الزواج الإسلامي للتعارف الجاد والموثق على الطريقة الشرعية.',
+        title: 'تطبيق الزواج الإسلامي - دبلة',
+        text: 'انضم إلينا في تطبيق دبلة للتعارف الجاد والموثق على الطريقة الشرعية.',
         url: window.location.href,
       }).catch(console.error);
     } else {
