@@ -41,7 +41,8 @@ export const ProfileDetails: React.FC<ProfileDetailsProps> = ({
   const { 
     currentUser, profiles, expressInterest, acceptInterest, ignoreProfile, 
     blockProfile, reportProfile, interactions, recordProfileView,
-    mySurvey, allSurveys, fetchCompatibilitySurvey, sendMessage
+    mySurvey, allSurveys, fetchCompatibilitySurvey, sendMessage,
+    messages
   } = useApp();
   const { addToast, showConfirm, triggerReviewPrompt } = useUIStore();
 
@@ -134,6 +135,20 @@ export const ProfileDetails: React.FC<ProfileDetailsProps> = ({
   );
   const isIgnored = interactions.some(i => i.fromUserId === currentUser?.id && i.toUserId === profile.id && i.type === "ignore");
   const isBlocked = interactions.some(i => i.fromUserId === currentUser?.id && i.toUserId === profile.id && i.type === "block");
+
+  // التحقق من وجود تواصل مسبق فعلي بين الطرفين (رسائل متبادلة، قبول اهتمام، أو بدء مسار التعارف)
+  const hasExchangedMessages = messages?.some(
+    m => (m.senderId === currentUser?.id && m.receiverId === profile.id) ||
+         (m.senderId === profile.id && m.receiverId === currentUser?.id)
+  ) ?? false;
+
+  const existingJourneyState = currentUser ? getJourneyState(currentUser.id, profile.id) : null;
+  const hasStartedJourney = Boolean(
+    existingJourneyState && 
+    (existingJourneyState.currentStage > 1 || existingJourneyState.status === "active" || existingJourneyState.status === "concluded")
+  );
+
+  const hasPriorCommunication = Boolean(hasExchangedMessages || hasAcceptedInterest || hasStartedJourney);
 
   const isPhotoLocked = profile.photoPrivacy === "hidden" || (profile.photoPrivacy === "accepted_interest_only" && !hasAcceptedInterest);
 
@@ -468,8 +483,8 @@ export const ProfileDetails: React.FC<ProfileDetailsProps> = ({
             </button>
           </div>
 
-          {/* الصف الثاني: الأزرار المساعدة جنباً إلى جنب بتنسيق متوازن */}
-          <div className="grid grid-cols-3 gap-2 pt-1">
+          {/* الصف الثاني: الأزرار المساعدة بتنسيق متوازن */}
+          <div className={`grid gap-2 pt-1 ${hasPriorCommunication ? "grid-cols-3" : "grid-cols-2"}`}>
             {/* زر حفظ الملف */}
             <button 
               onClick={handleToggleBookmark}
@@ -483,15 +498,17 @@ export const ProfileDetails: React.FC<ProfileDetailsProps> = ({
               <span>{isSaved ? "محفوظ بالمفضلة" : "حفظ الملف"}</span>
             </button>
 
-            {/* زر اعتذار راقٍ ومحترم */}
-            <button 
-              onClick={() => setShowApologyModal(true)}
-              className="py-2.5 px-3 rounded-xl border border-rose-200/80 bg-rose-50/50 hover:bg-rose-100/70 text-rose-700 text-xs font-bold flex items-center justify-center gap-1.5 transition cursor-pointer"
-              title="إنهاء التواصل بأدب بدون إحراج"
-            >
-              <Smile className="w-4 h-4 text-rose-600" />
-              <span>اعتذار راقٍ</span>
-            </button>
+            {/* زر اعتذار راقٍ ومحترم - يعرض فقط عند وجود تواصل فعلي مسبق بين الطرفين */}
+            {hasPriorCommunication && (
+              <button 
+                onClick={() => setShowApologyModal(true)}
+                className="py-2.5 px-3 rounded-xl border border-rose-200/80 bg-rose-50/50 hover:bg-rose-100/70 text-rose-700 text-xs font-bold flex items-center justify-center gap-1.5 transition cursor-pointer"
+                title="إنهاء التواصل بأدب بدون إحراج"
+              >
+                <Smile className="w-4 h-4 text-rose-600" />
+                <span>اعتذار راقٍ</span>
+              </button>
+            )}
 
             {/* زر تجاهل العضو */}
             <button 
@@ -1059,13 +1076,15 @@ export const ProfileDetails: React.FC<ProfileDetailsProps> = ({
               <Bookmark className={`w-3.5 h-3.5 ${isSaved ? "fill-amber-400 text-amber-400" : ""}`} />
             </button>
 
-            <button
-              onClick={() => setShowApologyModal(true)}
-              className="p-2 rounded-xl bg-white/10 border border-white/15 text-rose-300 hover:bg-rose-950/40 transition"
-              title="اعتذار راقٍ"
-            >
-              <Smile className="w-3.5 h-3.5" />
-            </button>
+            {hasPriorCommunication && (
+              <button
+                onClick={() => setShowApologyModal(true)}
+                className="p-2 rounded-xl bg-white/10 border border-white/15 text-rose-300 hover:bg-rose-950/40 transition"
+                title="اعتذار راقٍ"
+              >
+                <Smile className="w-3.5 h-3.5" />
+              </button>
+            )}
           </div>
         </div>
       </div>
