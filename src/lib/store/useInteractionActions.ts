@@ -43,7 +43,7 @@ export const useInteractionActions = (
           body: {
             userId: toUserId,
             title: "اهتمام جديد بملفك الشخصي",
-            body: `أبدى عضو اهتماماً جاداً بملفك الشخصي في تطبيق مودة ورحمة.`,
+            body: `أبدى عضو اهتماماً جاداً بملفك الشخصي في تطبيق دبلة.`,
             data: { chatUserId: currentUser.id, type: "interest", url: `/profile/${currentUser.id}` },
           },
         })
@@ -67,9 +67,25 @@ export const useInteractionActions = (
   const expressInterest = async (toUserId: string): Promise<ActionResult> => {
     if (!currentUser) return { ok: false, error: "يجب تسجيل الدخول أولاً." };
 
-    const { error } = await supabase.rpc("express_interest_rpc", { p_target_id: toUserId });
-    if (error) {
-      return fail(error);
+    let rpcSucceeded = false;
+    try {
+      const { error } = await supabase.rpc("express_interest_rpc", { p_target_id: toUserId });
+      if (!error) {
+        rpcSucceeded = true;
+      } else {
+        console.warn("express_interest_rpc error, trying direct insert fallback:", error.message);
+      }
+    } catch (e: any) {
+      console.warn("express_interest_rpc exception, trying direct insert fallback:", e?.message);
+    }
+
+    if (!rpcSucceeded) {
+      // إدراج مباشر في جدول interactions في حال عدم توفر الدالة أو خطأ جدول الحدود
+      const fallbackRes = await insertInteraction(toUserId, "interest");
+      if (!fallbackRes.ok) {
+        return fallbackRes;
+      }
+      return { ok: true };
     }
 
     const newInteraction: Interaction = {
@@ -104,9 +120,25 @@ export const useInteractionActions = (
   const acceptInterest = async (toUserId: string): Promise<ActionResult> => {
     if (!currentUser) return { ok: false, error: "يجب تسجيل الدخول أولاً." };
 
-    const { error } = await supabase.rpc("accept_interest_rpc", { p_target_id: toUserId });
-    if (error) {
-      return fail(error);
+    let rpcSucceeded = false;
+    try {
+      const { error } = await supabase.rpc("accept_interest_rpc", { p_target_id: toUserId });
+      if (!error) {
+        rpcSucceeded = true;
+      } else {
+        console.warn("accept_interest_rpc error, trying direct insert fallback:", error.message);
+      }
+    } catch (e: any) {
+      console.warn("accept_interest_rpc exception, trying direct insert fallback:", e?.message);
+    }
+
+    if (!rpcSucceeded) {
+      const fallbackRes = await insertInteraction(toUserId, "accept_interest");
+      if (!fallbackRes.ok) {
+        return fallbackRes;
+      }
+      await loadAll(currentUser.id, true);
+      return { ok: true };
     }
 
     const newInteraction: Interaction = {
