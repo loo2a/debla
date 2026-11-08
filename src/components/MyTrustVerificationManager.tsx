@@ -200,9 +200,10 @@ export const MyTrustVerificationManager: React.FC = () => {
                   <input
                     type="tel"
                     required
+                    maxLength={11}
                     placeholder="01xxxxxxxxx"
                     value={phoneInput}
-                    onChange={(e) => setPhoneInput(e.target.value)}
+                    onChange={(e) => setPhoneInput(e.target.value.replace(/[^0-9]/g, "").slice(0, 11))}
                     className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-emerald-600 font-mono text-left"
                     dir="ltr"
                   />
@@ -212,11 +213,15 @@ export const MyTrustVerificationManager: React.FC = () => {
                 </div>
               ) : (
                 <div>
-                  <label className="text-xs font-bold text-slate-700 block mb-1">
-                    ملاحظات أو تفاصيل التحقق المطلوبة
-                  </label>
+                  <div className="flex justify-between items-center mb-1">
+                    <label className="text-xs font-bold text-slate-700 block">
+                      ملاحظات أو تفاصيل التحقق المطلوبة
+                    </label>
+                    <span className="text-[10px] text-slate-400 font-mono">{requestNotes.length}/400</span>
+                  </div>
                   <textarea
                     rows={3}
+                    maxLength={400}
                     placeholder={
                       activeModalTier === "photo"
                         ? "أؤكد أن صورتي المرفوعة حقيقية وأطلب مطابقتها واعتماد شارة مطابقة الصورة..."
@@ -225,7 +230,7 @@ export const MyTrustVerificationManager: React.FC = () => {
                         : "مستندات المؤهل الدراسي أو جهة العمل للمراجعة..."
                     }
                     value={requestNotes}
-                    onChange={(e) => setRequestNotes(e.target.value)}
+                    onChange={(e) => setRequestNotes(e.target.value.slice(0, 400))}
                     className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-emerald-600"
                   />
                   <div className="flex items-center gap-1.5 text-[10px] text-emerald-800 bg-emerald-50 p-2.5 rounded-xl border border-emerald-200 mt-1.5">

@@ -25,11 +25,16 @@ export const StepEmailOtp: React.FC = () => {
 
   const handleSendOtp = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email.trim()) return;
+    const cleanEmail = email.trim().toLowerCase();
+    const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+    if (!cleanEmail || cleanEmail.length > 80 || !emailRegex.test(cleanEmail)) {
+      setErrorMessage("يرجى إدخال بريد إلكتروني صحيح بتنسيق سليم (لا يتجاوز 80 حرفاً).");
+      return;
+    }
 
     setIsLoading(true);
     setErrorMessage("");
-    const res = await requestEmailOtp(email);
+    const res = await requestEmailOtp(cleanEmail);
     setIsLoading(false);
 
     if (!res.ok) {
@@ -202,8 +207,9 @@ export const StepEmailOtp: React.FC = () => {
                   type="email"
                   required
                   dir="ltr"
+                  maxLength={80}
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  onChange={(e) => setEmail(e.target.value.slice(0, 80))}
                   placeholder="name@domain.com"
                   icon={<Mail className="w-4 h-4 text-emerald-600" />}
                 />
@@ -251,9 +257,9 @@ export const StepEmailOtp: React.FC = () => {
                   autoFocus
                   inputMode="numeric"
                   autoComplete="one-time-code"
-                  maxLength={8}
+                  maxLength={6}
                   value={otp}
-                  onChange={(e) => setOtp(e.target.value.replace(/[^0-9]/g, ""))}
+                  onChange={(e) => setOtp(e.target.value.replace(/[^0-9]/g, "").slice(0, 6))}
                   placeholder="••••••"
                   className="w-52 text-center py-3.5 rounded-2xl border-2 border-emerald-500 focus:outline-none text-3xl font-mono tracking-widest text-slate-900 focus:ring-4 focus:ring-emerald-100 transition shadow-inner bg-slate-50/50"
                 />

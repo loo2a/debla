@@ -165,18 +165,19 @@ export const MarriageJourneyTracker: React.FC<MarriageJourneyTrackerProps> = ({
       updateJourney({
         status: "concluded",
         concludedReason: finalApologyText,
+        concludedBy: currentUser.id,
       });
 
-      const message = `🌸 [اعتذار راقٍ وإنهاء مسار التعارف]:\n${finalApologyText}`;
+      const message = `🌸 [اعتذار راقٍ وإنهاء مسار التعارف]:\n${finalApologyText}\n\n(تم إغلاق المحادثة تلقائياً وفق ميثاق الوقار لحفظ الكرامة ومنع أي إلحاح أو عتاب)`;
       await sendChatMessage(message);
 
-      // تسجيل التجاهل بهدوء لمنع تكرار الإزعاج
+      // تسجيل التجاهل بهدوء لمنع تكرار الإزعاج أو الملاحقة
       try {
         await ignoreProfile(partner.id);
       } catch {}
 
       setShowApologyModal(false);
-      addToast("تم إنهاء التعارف بكل أدب واحترام متبادل وحفظ كرامة الطرفين.", "info");
+      addToast("تم إرسال الاعتذار المحترم وإغلاق المحادثة بنجاح، حفظ الله كرامتكما ووفقكما.", "success");
     } finally {
       setIsSendingApology(false);
     }
@@ -215,10 +216,10 @@ export const MarriageJourneyTracker: React.FC<MarriageJourneyTrackerProps> = ({
             <button
               type="button"
               onClick={() => setShowApologyModal(true)}
-              className="text-[10px] font-bold text-rose-200 hover:text-white bg-rose-500/20 hover:bg-rose-500/30 border border-rose-300/30 px-2 py-1 rounded-lg transition cursor-pointer"
-              title="إنهاء التعارف بلطف"
+              className="text-[11px] font-bold text-white bg-rose-600/90 hover:bg-rose-600 border border-rose-300/40 px-2.5 py-1 rounded-xl transition cursor-pointer flex items-center gap-1 shadow-xs"
+              title="إنهاء التعارف برسالة مهذبة جاهزة"
             >
-              اعتذار بأدب
+              <span>اعتذار محترم</span>
             </button>
           )}
 
@@ -283,14 +284,24 @@ export const MarriageJourneyTracker: React.FC<MarriageJourneyTrackerProps> = ({
           >
             {/* If Concluded */}
             {isConcluded ? (
-              <div className="bg-amber-50 border border-amber-200 p-3 rounded-2xl space-y-1.5 text-amber-900">
-                <p className="font-extrabold flex items-center gap-1.5 text-amber-800">
-                  <Smile className="w-4 h-4 text-amber-600" />
-                  <span>انتهى مسار التعارف بكل مودة وأدب</span>
+              <div className="bg-gradient-to-r from-rose-50 via-amber-50 to-emerald-50 border border-amber-200 p-3.5 rounded-2xl space-y-2 text-slate-800">
+                <div className="flex items-center justify-between border-b border-amber-200/60 pb-1.5">
+                  <p className="font-extrabold flex items-center gap-1.5 text-amber-900 text-xs">
+                    <Smile className="w-4 h-4 text-amber-700" />
+                    <span>انتهى مسار التعارف باعتذار محترم ودعاء بالتوفيق</span>
+                  </p>
+                  <span className="text-[10px] bg-amber-100/80 text-amber-900 px-2 py-0.5 rounded-full font-bold">
+                    مغلق بكرامة 🔒
+                  </span>
+                </div>
+                <p className="text-[11px] text-slate-600 leading-relaxed">
+                  «وَعَسَىٰ أَن تَكْرَهُوا شَيْئًا وَهُوَ خَيْرٌ لَّكُمْ». تم ختام الحديث بأسلوب راقٍ يحفظ كرامة الطرفين. تطبيقاً لميثاق الوقار: <strong>توقف التواصل تماماً وممنوع أي إلحاح أو عتاب أو تقييمات كيدية</strong>.
                 </p>
-                <p className="text-[11px] leading-relaxed">
-                  «وَعَسَىٰ أَن تَكْرَهُوا شَيْئًا وَهُوَ خَيْرٌ لَّكُمْ». تم ختام الحديث بأسلوب شرعي راقٍ، نسأل الله أن يرزقكما التوفيق والخير.
-                </p>
+                {journey.concludedReason && (
+                  <div className="bg-white/80 p-2.5 rounded-xl border border-amber-100 text-[11px] text-slate-700 italic">
+                    "{journey.concludedReason}"
+                  </div>
+                )}
               </div>
             ) : isCompleted ? (
               <div className="bg-emerald-50 border border-emerald-200 p-3 rounded-2xl space-y-1.5 text-emerald-900 text-center">
@@ -466,9 +477,10 @@ export const MarriageJourneyTracker: React.FC<MarriageJourneyTrackerProps> = ({
                 <input
                   type="text"
                   required
+                  maxLength={30}
                   placeholder="مثال: الحاج أحمد عبد الرحمن"
                   value={waliName}
-                  onChange={(e) => setWaliName(e.target.value)}
+                  onChange={(e) => setWaliName(e.target.value.slice(0, 30))}
                   className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-emerald-600"
                 />
               </div>
@@ -490,13 +502,14 @@ export const MarriageJourneyTracker: React.FC<MarriageJourneyTrackerProps> = ({
                 </div>
 
                 <div>
-                  <label className="text-xs font-bold text-slate-700 block mb-1">رقم الهاتف للتواصل</label>
+                  <label className="text-xs font-bold text-slate-700 block mb-1">رقم الهاتف للتواصل (11 رقماً)</label>
                   <input
                     type="tel"
                     required
+                    maxLength={11}
                     placeholder="01xxxxxxxxx"
                     value={waliPhone}
-                    onChange={(e) => setWaliPhone(e.target.value)}
+                    onChange={(e) => setWaliPhone(e.target.value.replace(/[^0-9]/g, "").slice(0, 11))}
                     className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-emerald-600 font-mono text-left"
                     dir="ltr"
                   />
@@ -507,9 +520,10 @@ export const MarriageJourneyTracker: React.FC<MarriageJourneyTrackerProps> = ({
                 <label className="text-xs font-bold text-slate-700 block mb-1">الوقت المفضل للاتصال</label>
                 <input
                   type="text"
+                  maxLength={60}
                   placeholder="مثال: بعد صلاة العشاء من 8 إلى 10 مساءً"
                   value={waliBestTime}
-                  onChange={(e) => setWaliBestTime(e.target.value)}
+                  onChange={(e) => setWaliBestTime(e.target.value.slice(0, 60))}
                   className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-emerald-600"
                 />
               </div>
@@ -557,6 +571,19 @@ export const MarriageJourneyTracker: React.FC<MarriageJourneyTrackerProps> = ({
               من أدب المسلم والوفاء بالأمانة إعلام الطرف الآخر بقرارك بلطف، من غير إحراج أو تجاهل مفاجئ. اختر الرسالة المناسبة ليتم إرسالها بود ودعاء بالتوفيق:
             </p>
 
+            {/* Anti-harassment and safety rules notice */}
+            <div className="bg-emerald-50 border border-emerald-200/80 rounded-2xl p-3 text-[11px] text-emerald-950 space-y-1 leading-snug">
+              <span className="font-extrabold flex items-center gap-1.5 text-emerald-800">
+                <ShieldCheck className="w-4 h-4 text-emerald-600" />
+                <span>ضمانات وقواعد التطبيق لإنهاء التعارف بكرامة:</span>
+              </span>
+              <ul className="list-disc list-inside space-y-0.5 text-emerald-900/90 pr-1">
+                <li><strong>توقف التواصل فوراً:</strong> يتم إغلاق صندوق الكتابة بين الطرفين لمنع الإلحاح أو اللوم.</li>
+                <li><strong>حظر الانتقام والتقييمات الكيدية:</strong> يُمنع الطرفان من كتابة أي تقييم مسيء أو بلاغ كيدي.</li>
+                <li><strong>خصوصية تامة:</strong> لا تتأثر نقاط أو سمعة أي من الطرفين بالاعتذار.</li>
+              </ul>
+            </div>
+
             <div className="space-y-2">
               {APOLOGY_TEMPLATES.map((tmpl) => (
                 <label 
@@ -586,12 +613,16 @@ export const MarriageJourneyTracker: React.FC<MarriageJourneyTrackerProps> = ({
 
             {/* Custom apology option */}
             <div className="space-y-1">
-              <span className="text-xs font-bold text-slate-700 block">أو اكتب رسالة اعتذار مخصصة مهذبة:</span>
+              <div className="flex justify-between items-center text-xs">
+                <span className="font-bold text-slate-700 block">أو اكتب رسالة اعتذار مخصصة مهذبة:</span>
+                <span className="text-[10px] text-slate-400 font-mono">{customApologyText.length}/240</span>
+              </div>
               <textarea
+                maxLength={240}
                 value={customApologyText}
-                onChange={(e) => setCustomApologyText(e.target.value)}
+                onChange={(e) => setCustomApologyText(e.target.value.slice(0, 240))}
                 rows={2}
-                placeholder="اكتب كلماتك الطيبة هنا..."
+                placeholder="اكتب كلماتك الطيبة هنا بحد أقصى 240 حرفاً..."
                 className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-emerald-600 leading-relaxed"
               />
             </div>

@@ -59,9 +59,10 @@ export const AdminUsersManager: React.FC<AdminUsersManagerProps> = ({ onSelectUs
         <div className="relative">
           <input
             type="text"
+            maxLength={50}
             placeholder="ابحث بالاسم، رقم العضوية، المدينة، أو البريد..."
             value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
+            onChange={(e) => setSearchTerm(e.target.value.slice(0, 50))}
             className="w-full pl-4 pr-10 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
           />
           <Search className="w-4 h-4 text-slate-400 absolute right-3.5 top-3" />

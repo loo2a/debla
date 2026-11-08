@@ -311,9 +311,10 @@ export const AdminDeviceSecurityManager: React.FC = () => {
         <div className="relative">
           <input
             type="text"
+            maxLength={50}
             placeholder="ابحث بالمعرّف أو الإيميل أو سبب الحظر..."
             value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
+            onChange={(e) => setSearchTerm(e.target.value.slice(0, 50))}
             className="w-full pl-4 pr-9 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500"
           />
           <Search className="w-4 h-4 text-slate-400 absolute right-3 top-2.5" />
@@ -463,8 +464,9 @@ export const AdminDeviceSecurityManager: React.FC = () => {
                 <label className="block text-slate-700 font-bold mb-1">سبب الحظر (موجز للإدارة):</label>
                 <input
                   type="text"
+                  maxLength={150}
                   value={banReason}
-                  onChange={(e) => setBanReason(e.target.value)}
+                  onChange={(e) => setBanReason(e.target.value.slice(0, 150))}
                   placeholder="اكتب سبب الحظر..."
                   required
                   className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-rose-500/20"

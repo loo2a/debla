@@ -388,11 +388,15 @@ export const SearchProfileCard: React.FC<SearchProfileCardProps> = ({
 
               {selectedReason === "سبب آخر..." && (
                 <div className="space-y-1">
-                  <label className="text-[11px] font-bold text-slate-700 block">تفاصيل البلاغ</label>
+                  <div className="flex justify-between items-center text-[11px] text-slate-700">
+                    <label className="font-bold block">تفاصيل البلاغ</label>
+                    <span className="font-mono text-slate-400 text-[10px]">{customReason.length}/500</span>
+                  </div>
                   <textarea
                     required
+                    maxLength={500}
                     value={customReason}
-                    onChange={(e) => setCustomReason(e.target.value)}
+                    onChange={(e) => setCustomReason(e.target.value.slice(0, 500))}
                     placeholder="يرجى كتابة تفاصيل المخالفة بوضوح..."
                     rows={3}
                     className="w-full text-xs p-3 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-rose-500/30 text-slate-800"

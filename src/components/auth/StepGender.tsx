@@ -128,8 +128,9 @@ export const StepGender: React.FC<StepGenderProps> = ({ onSelect }) => {
             <Input
               type="text"
               placeholder="مثال: WALI-9842"
+              maxLength={15}
               value={inviteCode}
-              onChange={(e) => setInviteCode(e.target.value.toUpperCase())}
+              onChange={(e) => setInviteCode(e.target.value.toUpperCase().slice(0, 15))}
               className="font-mono text-center tracking-widest text-sm uppercase bg-white"
             />
             <span className="text-[10px] text-slate-500 block">

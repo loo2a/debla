@@ -1100,11 +1100,15 @@ export const ProfileDetails: React.FC<ProfileDetailsProps> = ({
 
             <form onSubmit={handleReport} className="space-y-4">
               <div className="space-y-1.5">
-                <label className="text-xs font-bold text-slate-700 block">سبب البلاغ بالتفصيل</label>
+                <div className="flex justify-between items-center text-xs">
+                  <label className="font-bold text-slate-700 block">سبب البلاغ بالتفصيل</label>
+                  <span className="text-[10px] text-slate-400 font-mono">{reportReason.length}/500</span>
+                </div>
                 <textarea 
                   required
+                  maxLength={500}
                   value={reportReason}
-                  onChange={(e) => setReportReason(e.target.value)}
+                  onChange={(e) => setReportReason(e.target.value.slice(0, 500))}
                   rows={3}
                   placeholder="يرجى توضيح السلوك المخالف بالتفصيل (مثل: عدم الجدية، طلب التواصل خارج الضوابط، عدم صحة البيانات، إلخ)"
                   className="w-full px-3.5 py-2.5 rounded-2xl border border-slate-200 text-xs text-slate-700 focus:ring-2 focus:ring-emerald-500 focus:outline-none"
@@ -1245,12 +1249,16 @@ export const ProfileDetails: React.FC<ProfileDetailsProps> = ({
 
             {/* رسالة اعتذار مخصصة */}
             <div className="space-y-1">
-              <span className="text-xs font-bold text-slate-700 block">أو اكتب رسالة اعتذار مخصصة مهذبة:</span>
+              <div className="flex justify-between items-center text-xs">
+                <span className="font-bold text-slate-700 block">أو اكتب رسالة اعتذار مخصصة مهذبة:</span>
+                <span className="text-[10px] text-slate-400 font-mono">{customApologyText.length}/240</span>
+              </div>
               <textarea
+                maxLength={240}
                 value={customApologyText}
-                onChange={(e) => setCustomApologyText(e.target.value)}
+                onChange={(e) => setCustomApologyText(e.target.value.slice(0, 240))}
                 rows={2}
-                placeholder="اكتب كلماتك الطيبة هنا..."
+                placeholder="اكتب كلماتك الطيبة هنا بحد أقصى 240 حرفاً..."
                 className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-emerald-500 focus:outline-none leading-relaxed"
               />
             </div>

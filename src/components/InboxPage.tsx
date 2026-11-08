@@ -363,23 +363,34 @@ export const InboxPage: React.FC<InboxPageProps> = ({
                         </button>
                       </div>
                     )}
-                    <form onSubmit={handleSendMessage} className="p-3 flex gap-2">
-                      <input 
-                        type="text" 
-                        value={typedMessage}
-                        onChange={(e) => {
-                          setTypedMessage(e.target.value);
-                          if (chatError) setChatError(null);
-                        }}
-                        placeholder="اكتب رسالتك الجادة والمحترمة هنا..."
-                        className="flex-1 px-4 py-2.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-1 focus:ring-emerald-500"
-                      />
-                      <button
-                        type="submit"
-                        className="p-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl transition flex items-center justify-center flex-shrink-0 shadow-md shadow-emerald-600/10"
-                      >
-                        <Send className="w-4 h-4 rotate-180" />
-                      </button>
+                    <form onSubmit={handleSendMessage} className="p-3 space-y-1">
+                      <div className="flex gap-2 items-center">
+                        <div className="relative flex-1">
+                          <input 
+                            type="text" 
+                            maxLength={240}
+                            value={typedMessage}
+                            onChange={(e) => {
+                              setTypedMessage(e.target.value.slice(0, 240));
+                              if (chatError) setChatError(null);
+                            }}
+                            placeholder="اكتب رسالتك الجادة والمحترمة (بحد أقصى 240 حرفاً)..."
+                            className="w-full px-4 py-2.5 pl-14 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                          />
+                          <span className={`absolute left-3 top-1/2 -translate-y-1/2 text-[10px] font-mono pointer-events-none ${
+                            typedMessage.length >= 220 ? "text-amber-600 font-bold" : "text-slate-400"
+                          }`}>
+                            {typedMessage.length}/240
+                          </span>
+                        </div>
+                        <button
+                          type="submit"
+                          disabled={!typedMessage.trim() || typedMessage.length > 240}
+                          className="p-2.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-40 text-white rounded-xl transition flex items-center justify-center flex-shrink-0 shadow-md shadow-emerald-600/10 cursor-pointer"
+                        >
+                          <Send className="w-4 h-4 rotate-180" />
+                        </button>
+                      </div>
                     </form>
                   </div>
                 );

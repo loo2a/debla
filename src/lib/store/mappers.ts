@@ -19,13 +19,13 @@ export const LOCKED_IDENTITY_KEYS = [
   "name", "gender", "age", "maritalStatus", "nationality", "accountRole"
 ] as const;
 
-export const MAX_MESSAGE_LENGTH = 2000;
+export const MAX_MESSAGE_LENGTH = 240;
 
 export const toErrorMessage = (err: any): string => {
   const code = err?.code as string | undefined;
   const message = String(err?.message ?? "");
   if (code === "23505") return "هذا الإجراء تم تسجيله مسبقاً.";
-  if (code === "23514") return "إحدى القيم المُدخلة غير صالحة. يرجى مراجعتها.";
+  if (code === "23514" || /invalid_message_length/i.test(message)) return "نص الرسالة غير صالح أو يتجاوز الحد الأقصى المسموح به (240 حرفاً).";
   if (code === "42501" || /row-level security|not_authorized|permission denied/i.test(message)) {
     return "غير مسموح لك بتنفيذ هذا الإجراء.";
   }

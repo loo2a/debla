@@ -87,6 +87,14 @@ export const MyProfilePage: React.FC = () => {
       addToast("يجب ألا تقل فقرة التحدث عن النفس أو مواصفات الشريك عن 140 حرفاً لضمان الجدية التامة.", "error");
       return;
     }
+    if (editAboutMe.length > 1000 || editPartnerSpecs.length > 1000) {
+      addToast("يجب ألا تتجاوز فقرة التحدث عن النفس أو مواصفات الشريك 1000 حرف.", "error");
+      return;
+    }
+    if (editProfession.trim().length > 50) {
+      addToast("حقل المهنة / الوظيفة يجب ألا يتجاوز 50 حرفاً.", "error");
+      return;
+    }
 
     // Contact Leakage check
     const contactLeakPattern = /(?:https?:\/\/|www\.|\.com|\.net|[0-9]{8,}|[\u0660-\u0669]{8,})/i;
@@ -731,8 +739,9 @@ export const MyProfilePage: React.FC = () => {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
                 <Input
                   label="المهنة / الوظيفة"
+                  maxLength={50}
                   value={editProfession}
-                  onChange={(e) => setEditProfession(e.target.value)}
+                  onChange={(e) => setEditProfession(e.target.value.slice(0, 50))}
                   required
                 />
 
@@ -854,13 +863,14 @@ export const MyProfilePage: React.FC = () => {
                 <div className="flex justify-between text-xs font-semibold text-slate-700">
                   <span>تحدث عن نفسك بالتفصيل</span>
                   <span className={`text-[10px] font-mono ${editAboutMe.length < 140 ? 'text-amber-600 font-bold' : 'text-emerald-600 font-bold'}`}>
-                    {editAboutMe.length} / 140 حرف كحد أدنى
+                    {editAboutMe.length} / 140 حرف كحد أدنى (الحد الأقصى 1000)
                   </span>
                 </div>
                 <textarea
                   required
+                  maxLength={1000}
                   value={editAboutMe}
-                  onChange={(e) => setEditAboutMe(e.target.value)}
+                  onChange={(e) => setEditAboutMe(e.target.value.slice(0, 1000))}
                   rows={4}
                   className="w-full px-3.5 py-2.5 text-xs rounded-2xl border border-slate-200 text-slate-700 focus:outline-none focus:ring-1 focus:ring-emerald-500 bg-white leading-relaxed resize-none shadow-2xs"
                   placeholder="اكتب عن طباعك، اهتماماتك، روتين يومك، وقيمك..."
@@ -871,13 +881,14 @@ export const MyProfilePage: React.FC = () => {
                 <div className="flex justify-between text-xs font-semibold text-slate-700">
                   <span>المواصفات المطلوبة في شريك الحياة</span>
                   <span className={`text-[10px] font-mono ${editPartnerSpecs.length < 140 ? 'text-amber-600 font-bold' : 'text-emerald-600 font-bold'}`}>
-                    {editPartnerSpecs.length} / 140 حرف كحد أدنى
+                    {editPartnerSpecs.length} / 140 حرف كحد أدنى (الحد الأقصى 1000)
                   </span>
                 </div>
                 <textarea
                   required
+                  maxLength={1000}
                   value={editPartnerSpecs}
-                  onChange={(e) => setEditPartnerSpecs(e.target.value)}
+                  onChange={(e) => setEditPartnerSpecs(e.target.value.slice(0, 1000))}
                   rows={4}
                   className="w-full px-3.5 py-2.5 text-xs rounded-2xl border border-slate-200 text-slate-700 focus:outline-none focus:ring-1 focus:ring-emerald-500 bg-white leading-relaxed resize-none shadow-2xs"
                   placeholder="المواصفات الدينية، الاجتماعية، والشخصية التي ترغب بها..."

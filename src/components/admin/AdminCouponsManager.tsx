@@ -104,9 +104,10 @@ export const AdminCouponsManager: React.FC = () => {
               <input
                 type="text"
                 required
+                maxLength={20}
                 placeholder="مثال: MAWADA2026 أو EID50"
                 value={code}
-                onChange={(e) => setCode(e.target.value)}
+                onChange={(e) => setCode(e.target.value.toUpperCase().slice(0, 20))}
                 className="w-full px-3 py-2 text-xs uppercase font-mono font-bold rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
               />
             </div>

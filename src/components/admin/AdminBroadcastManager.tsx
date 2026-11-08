@@ -183,26 +183,34 @@ export const AdminBroadcastManager: React.FC<AdminBroadcastManagerProps> = ({
 
         {/* Message Title */}
         <div className="space-y-1">
-          <label className="text-xs font-bold text-slate-700">عنوان التنبيه أو الإشعار</label>
+          <div className="flex justify-between items-center text-xs">
+            <label className="font-bold text-slate-700">عنوان التنبيه أو الإشعار</label>
+            <span className="font-mono text-slate-400 text-[10px]">{title.length}/100</span>
+          </div>
           <input
             type="text"
             required
-            placeholder="مثال: تنبيه هام من إدارة منصة مودة ورحمة"
+            maxLength={100}
+            placeholder="مثال: تنبيه هام من إدارة منصة دبلة"
             value={title}
-            onChange={(e) => setTitle(e.target.value)}
+            onChange={(e) => setTitle(e.target.value.slice(0, 100))}
             className="w-full px-3.5 py-2.5 text-xs font-bold rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
           />
         </div>
 
         {/* Message Content */}
         <div className="space-y-1">
-          <label className="text-xs font-bold text-slate-700">نص الرسالة والإشعار</label>
+          <div className="flex justify-between items-center text-xs">
+            <label className="font-bold text-slate-700">نص الرسالة والإشعار</label>
+            <span className="font-mono text-slate-400 text-[10px]">{content.length}/500</span>
+          </div>
           <textarea
             required
             rows={4}
-            placeholder="اكتب التوجيه أو الإشعار بالتفصيل هنا..."
+            maxLength={500}
+            placeholder="اكتب التوجيه أو الإشعار بالتفصيل هنا (بحد أقصى 500 حرف)..."
             value={content}
-            onChange={(e) => setContent(e.target.value)}
+            onChange={(e) => setContent(e.target.value.slice(0, 500))}
             className="w-full px-3.5 py-2.5 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 resize-none leading-relaxed"
           />
         </div>

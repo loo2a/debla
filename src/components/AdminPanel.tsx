@@ -301,9 +301,10 @@ export const AdminPanel: React.FC = () => {
                       <div className="space-y-2 pt-1">
                         <input
                           type="text"
+                          maxLength={200}
                           placeholder="سبب الرفض إن وجدت مخالفة (اختياري)..."
                           value={rejectNotes[user.id] || ""}
-                          onChange={(e) => setRejectNotes(prev => ({ ...prev, [user.id]: e.target.value }))}
+                          onChange={(e) => setRejectNotes(prev => ({ ...prev, [user.id]: e.target.value.slice(0, 200) }))}
                           className="w-full px-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-1 focus:ring-rose-500"
                         />
 
@@ -499,10 +500,11 @@ export const AdminPanel: React.FC = () => {
                       <div className="pt-2 border-t border-slate-100 space-y-2">
                         <input
                           type="text"
+                          maxLength={200}
                           placeholder="ملاحظات الإدارة (اختياري، مثلاً: تم التحقق من بطاقة الهوية)"
                           value={rejectNotes[req.id] || ""}
-                          onChange={(e) => setRejectNotes(prev => ({ ...prev, [req.id]: e.target.value }))}
-                          className="w-full px-3 py-1.5 text-xs rounded-xl border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
+                          onChange={(e) => setRejectNotes(prev => ({ ...prev, [req.id]: e.target.value.slice(0, 200) }))}
+                          className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
                         />
                         <div className="flex gap-2">
                           <button

@@ -137,6 +137,7 @@ export const StepProfileForm: React.FC<StepProfileFormProps> = ({
               <Input
                 label="الاسم المستعار أو الاسم الأول"
                 required
+                maxLength={30}
                 placeholder="أحمد / فاطمة"
                 error={errors.name?.message}
                 {...register("name")}
@@ -146,6 +147,7 @@ export const StepProfileForm: React.FC<StepProfileFormProps> = ({
                 label="رقم الموبايل (لا يظهر لأحد)"
                 required
                 dir="ltr"
+                maxLength={15}
                 placeholder="+201012345678"
                 error={errors.mobile?.message}
                 {...register("mobile")}
@@ -184,6 +186,7 @@ export const StepProfileForm: React.FC<StepProfileFormProps> = ({
               <Input
                 label="المهنة / الوظيفة"
                 required
+                maxLength={50}
                 placeholder="مهندس برمجيات / معلمة"
                 error={errors.profession?.message}
                 {...register("profession")}
@@ -477,6 +480,7 @@ export const StepProfileForm: React.FC<StepProfileFormProps> = ({
               <textarea
                 rows={4}
                 required
+                maxLength={1000}
                 placeholder="اكتب عن طباعك، اهتماماتك، طبيعة عملك، أهدافك في الحياة، وما يهم الطرف الآخر معرفته بصدق ووضوح..."
                 className={`w-full p-3 rounded-2xl border text-xs sm:text-sm bg-white text-slate-800 focus:outline-none focus:ring-2 leading-relaxed ${
                   errors.aboutMe
@@ -501,12 +505,13 @@ export const StepProfileForm: React.FC<StepProfileFormProps> = ({
                     partnerSpecsText.length >= 140 ? "text-emerald-600 font-bold" : "text-amber-600"
                   }`}
                 >
-                  {partnerSpecsText.length} / 140 حرف كحد أدنى
+                  {partnerSpecsText.length} / 140 حرف كحد أدنى (الحد الأقصى 1000)
                 </span>
               </div>
               <textarea
                 rows={4}
                 required
+                maxLength={1000}
                 placeholder="وضح الصفات الدينية والخلقية والاجتماعية التي تبحث عنها، وما تفضله في شريك حياتك وطبيعة البيت الذي ترغب في بنائه..."
                 className={`w-full p-3 rounded-2xl border text-xs sm:text-sm bg-white text-slate-800 focus:outline-none focus:ring-2 leading-relaxed ${
                   errors.partnerSpecs

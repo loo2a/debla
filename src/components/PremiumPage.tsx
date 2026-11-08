@@ -236,10 +236,11 @@ export const PremiumPage: React.FC = () => {
               <div className="flex gap-2">
                 <input 
                   type="text"
+                  maxLength={20}
                   value={promoCodeInput}
-                  onChange={(e) => setPromoCodeInput(e.target.value)}
+                  onChange={(e) => setPromoCodeInput(e.target.value.toUpperCase().slice(0, 20))}
                   placeholder="أدخل كود الخصم (مثال: MAWADA2026)"
-                  className="flex-1 px-3 py-2 rounded-xl border border-slate-200 text-xs uppercase focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                  className="flex-1 px-3 py-2 rounded-xl border border-slate-200 text-xs uppercase focus:outline-none focus:ring-1 focus:ring-emerald-500 font-mono tracking-wider"
                 />
                 <button
                   type="button"

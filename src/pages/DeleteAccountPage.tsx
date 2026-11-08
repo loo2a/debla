@@ -226,18 +226,23 @@ export const DeleteAccountPage: React.FC = () => {
                   label="البريد الإلكتروني المسجل في التطبيق"
                   type="email"
                   required
+                  maxLength={80}
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  onChange={(e) => setEmail(e.target.value.slice(0, 80))}
                   placeholder="name@example.com"
                   icon={<Mail className="w-4 h-4" />}
                 />
 
                 <div className="space-y-1.5">
-                  <label className="text-xs font-semibold text-slate-700">سبب الحذف (اختياري)</label>
+                  <div className="flex justify-between items-center text-xs">
+                    <label className="font-semibold text-slate-700">سبب الحذف (اختياري)</label>
+                    <span className="text-[10px] text-slate-400 font-mono">{reason.length}/300</span>
+                  </div>
                   <textarea
                     rows={3}
+                    maxLength={300}
                     value={reason}
-                    onChange={(e) => setReason(e.target.value)}
+                    onChange={(e) => setReason(e.target.value.slice(0, 300))}
                     placeholder="مثال: تم الزواج والحمد لله، أو أي ملاحظات أخرى..."
                     className="w-full text-xs rounded-xl border border-slate-200 p-3 focus:outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 resize-none"
                   />

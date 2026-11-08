@@ -294,8 +294,9 @@ export const GuardianPortal: React.FC = () => {
               <Input
                 type="text"
                 placeholder="مثال: WALI-9842"
+                maxLength={15}
                 value={inviteCodeInput}
-                onChange={(e) => setInviteCodeInput(e.target.value.toUpperCase())}
+                onChange={(e) => setInviteCodeInput(e.target.value.toUpperCase().slice(0, 15))}
                 className="text-center font-mono text-lg font-black tracking-widest uppercase py-3 border-2 focus:border-emerald-500"
                 required
               />

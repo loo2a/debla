@@ -206,8 +206,9 @@ export const ProfileEditRequestModal: React.FC<ProfileEditRequestModalProps> = (
               ) : (
                 <input
                   type={selectedField === "age" ? "number" : "text"}
+                  maxLength={selectedField === "name" ? 30 : 60}
                   value={newValue}
-                  onChange={(e) => setNewValue(e.target.value)}
+                  onChange={(e) => setNewValue(e.target.value.slice(0, selectedField === "name" ? 30 : 60))}
                   placeholder="أدخل القيمة الجديدة هنا..."
                   className="w-full px-4 py-2.5 rounded-xl border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-rose-500 focus:border-rose-500"
                 />
@@ -216,12 +217,16 @@ export const ProfileEditRequestModal: React.FC<ProfileEditRequestModalProps> = (
 
             {/* Justification Reason */}
             <div>
-              <label className="block text-xs sm:text-sm font-bold text-gray-700 dark:text-gray-300 mb-1.5">
-                سبب التعديل والتوضيح للإدارة:
-              </label>
+              <div className="flex justify-between items-center mb-1.5">
+                <label className="block text-xs sm:text-sm font-bold text-gray-700 dark:text-gray-300">
+                  سبب التعديل والتوضيح للإدارة:
+                </label>
+                <span className="text-[10px] text-slate-400 font-mono">{reason.length}/500</span>
+              </div>
               <textarea
+                maxLength={500}
                 value={reason}
-                onChange={(e) => setReason(e.target.value)}
+                onChange={(e) => setReason(e.target.value.slice(0, 500))}
                 rows={3}
                 placeholder="مثال: حدث خطأ إملائي في كتابة الاسم عند التسجيل، أو تصحيح تاريخ الميلاد حسب الهوية الشخصية..."
                 className="w-full px-4 py-2.5 rounded-xl border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-rose-500 focus:border-rose-500 resize-none"

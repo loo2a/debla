@@ -106,8 +106,9 @@ export const SuccessStories: React.FC = () => {
                   <input 
                     type="text"
                     required
+                    maxLength={30}
                     value={husband}
-                    onChange={(e) => setHusband(e.target.value)}
+                    onChange={(e) => setHusband(e.target.value.slice(0, 30))}
                     placeholder="عبد الرحمن بن فلان"
                     className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs text-slate-700 focus:outline-none focus:ring-1 focus:ring-emerald-500 bg-white"
                   />
@@ -118,8 +119,9 @@ export const SuccessStories: React.FC = () => {
                   <input 
                     type="text"
                     required
+                    maxLength={30}
                     value={wife}
-                    onChange={(e) => setWife(e.target.value)}
+                    onChange={(e) => setWife(e.target.value.slice(0, 30))}
                     placeholder="فاطمة الزهراء"
                     className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs text-slate-700 focus:outline-none focus:ring-1 focus:ring-emerald-500 bg-white"
                   />
@@ -127,11 +129,15 @@ export const SuccessStories: React.FC = () => {
               </div>
 
               <div className="space-y-1">
-                <label className="text-[10px] font-semibold text-slate-600 block">تفاصيل قصة زواجكم المبارك</label>
+                <div className="flex justify-between items-center text-[10px] text-slate-600">
+                  <label className="font-semibold block">تفاصيل قصة زواجكم المبارك</label>
+                  <span className="font-mono text-slate-400">{storyText.length}/800</span>
+                </div>
                 <textarea 
                   required
+                  maxLength={800}
                   value={storyText}
-                  onChange={(e) => setStoryText(e.target.value)}
+                  onChange={(e) => setStoryText(e.target.value.slice(0, 800))}
                   rows={4}
                   placeholder="كيف تم التوافق؟ كيف كانت التسهيلات الشرعية ومواقف الأهل والرؤية الشرعية؟"
                   className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs text-slate-700 focus:outline-none focus:ring-1 focus:ring-emerald-500 bg-white leading-relaxed"
